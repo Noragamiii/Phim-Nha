@@ -174,6 +174,10 @@ details.panel summary{cursor:pointer}
 .stepcard{border-top:1px solid var(--line);padding-top:8px}.stepcard h3{margin:4px 0 6px}.stepcard p{max-width:68ch}
 .fb2{border:1px solid var(--line);border-left:4px solid var(--rh);border-radius:0 10px 10px 0;background:var(--surface);padding:10px 14px;margin:10px 0}.fb2 ul{margin:6px 0 0;padding-left:18px}.fb2 li{margin:5px 0}
 .acts{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.meterbox{position:relative;height:14px;background:var(--surface2);border:1px solid var(--line);border-radius:7px;overflow:hidden;margin:12px 0 4px}
+.mfill{height:100%;width:0;background:linear-gradient(90deg,var(--ok),var(--lantern))}
+.mgate{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--bad)}
+#micDlg ul{padding-left:18px}#micDlg li{margin:5px 0}
 .chat{display:flex;flex-direction:column;gap:10px;max-height:46vh;overflow-y:auto;margin:10px 0}
 .msg{padding:10px 14px;border-radius:12px;max-width:85%}
 .msg.user{align-self:flex-end;background:var(--ink);color:var(--surface)}
@@ -275,6 +279,7 @@ legend{font-weight:600;margin-bottom:6px}
     <label>Âm sắc <select id="voiceSel"><option value="piano">Piano</option><option value="jazz">Organ jazz</option><option value="church">Organ nhà thờ</option></select></label>
     <label>Âm lượng <input type="range" id="vol" min="0" max="1.2" step="0.05" style="width:70px"></label>
     <button class="dbtn" id="micBtn" aria-pressed="false" title="Nghe đàn thật qua micro">Micro <span class="meter"><i id="micLvl"></i></span></button>
+    <button class="dbtn" id="micSet" title="Chỉnh độ nhạy micro">Chỉnh micro</button>
     <button class="dbtn" id="bigBtn" aria-pressed="false" title="Phím to hơn để bấm bằng ngón trên iPad">Phím to</button>
     <button class="dbtn" id="midiBtn" title="Kết nối đàn có cổng USB MIDI">MIDI</button>
     <div class="oct" title="Quãng tám cho bàn phím máy tính (hàng Z và hàng Q)"><button class="dbtn" id="octDown" aria-label="Hạ quãng tám">−</button>Phím máy tính <span id="octLbl">C3</span><button class="dbtn" id="octUp" aria-label="Tăng quãng tám">+</button></div>
@@ -283,6 +288,7 @@ legend{font-weight:600;margin-bottom:6px}
 </div>
 </div>
 <dialog id="onboard" aria-label="Cá nhân hóa lớp học"></dialog>
+<dialog id="micDlg" aria-label="Chỉnh micro"></dialog>
 <div id="toast" role="status"></div>
 <script>
 /* ===== Music helpers ===== */
@@ -628,40 +634,104 @@ const Midi={sound:true,
 };
 
 /* ===== Micro: nghe đàn thật (một nốt mỗi lúc) ===== */
-const Mic={on:false,stream:null,an:null,buf:null,timer:0,cur:-1,cand:-1,candN:0,prevRms:0,quiet:0,lastFire:0,
-  async toggle(){if(this.on)return this.stop();AudioEng.init();
-    if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){toast('Trình duyệt không cho dùng micro ở đây.');return;}
-    try{try{if(navigator.audioSession)navigator.audioSession.type='play-and-record';}catch(e){}this.stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});}
-    catch(e){toast(OFFLINE?'Không mở được micro. Cho phép micro khi trình duyệt hỏi. Trên Mac: Cài đặt hệ thống → Quyền riêng tư & Bảo mật → Micrô → bật cho trình duyệt. Trên iPad: Cài đặt → Safari → Micrô.':'Không mở được micro. Nếu khung xem chặn micro, hãy mở trang ở tab riêng và cho phép micro.',7000);return;}
-    const src=AudioEng.ctx.createMediaStreamSource(this.stream);this.an=AudioEng.ctx.createAnalyser();this.an.fftSize=2048;src.connect(this.an);
-    this.buf=new Float32Array(2048);this.on=true;$('#micBtn').classList.add('on');$('#micBtn').setAttribute('aria-pressed','true');
-    toast('Micro đang nghe. Đánh từng nốt rõ ràng trên PSR-F52, để điện thoại/máy tính gần loa đàn.',4200);
-    this.timer=setInterval(()=>this.tick(),30);},
-  stop(){this.on=false;clearInterval(this.timer);try{if(navigator.audioSession)navigator.audioSession.type='playback';}catch(e){}if(this.stream)this.stream.getTracks().forEach(t=>t.stop());this.stream=null;$('#micBtn').classList.remove('on');$('#micBtn').setAttribute('aria-pressed','false');},
+const Mic={on:false,stream:null,an:null,buf:null,timer:0,cur:-1,cand:-1,candN:0,lastFire:0,noise:0,armed:true,peak:0,valley:1,pending:0,quiet:0,last:{rms:0,m:-1,clar:0},
+  cfg(){const s=Store.s.settings;if(!s.mic)s.mic={gain:4,noise:0,device:'',cal:false};return s.mic;},
+  async toggle(){if(this.on)return this.stop();await this.start();},
+  async start(){AudioEng.init();
+    if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){toast('Trình duyệt không cho dùng micro ở đây.');return false;}
+    const cfg=this.cfg();const audio={echoCancellation:false,noiseSuppression:false,autoGainControl:false,channelCount:1};if(cfg.device)audio.deviceId={exact:cfg.device};
+    try{try{if(navigator.audioSession)navigator.audioSession.type='play-and-record';}catch(e){}
+      try{this.stream=await navigator.mediaDevices.getUserMedia({audio});}catch(e){if(cfg.device){cfg.device='';delete audio.deviceId;this.stream=await navigator.mediaDevices.getUserMedia({audio});}else throw e;}}
+    catch(e){toast(OFFLINE?'Không mở được micro. Cho phép micro khi trình duyệt hỏi. Trên Mac: Cài đặt hệ thống → Quyền riêng tư & Bảo mật → Micrô → bật cho trình duyệt. Trên iPad: Cài đặt → Safari → Micrô.':'Không mở được micro. Nếu khung xem chặn micro, hãy mở trang ở tab riêng và cho phép micro.',7000);return false;}
+    const c=AudioEng.ctx;try{await c.resume();}catch(e){}
+    this.src=c.createMediaStreamSource(this.stream);this.hp=c.createBiquadFilter();this.hp.type='highpass';this.hp.frequency.value=55;
+    this.g=c.createGain();this.g.gain.value=cfg.gain;this.an=c.createAnalyser();this.an.fftSize=2048;
+    this.mute=c.createGain();this.mute.gain.value=0;
+    this.src.connect(this.hp);this.hp.connect(this.g);this.g.connect(this.an);this.an.connect(this.mute);this.mute.connect(c.destination);
+    this.buf=new Float32Array(2048);this.noise=cfg.noise?cfg.noise*cfg.gain:0;this.cur=-1;this.armed=true;this.peak=0;this.valley=1;this.pending=0;this.startAt=performance.now();
+    this.on=true;$('#micBtn').classList.add('on');$('#micBtn').setAttribute('aria-pressed','true');
+    toast(cfg.cal?'Micro đang nghe. Đánh từng nốt rõ ràng trên PSR-F52.':'Micro đang nghe. Nếu app nhận nốt kém, bấm Chỉnh micro → Tự hiệu chỉnh (8 giây).',4500);
+    clearInterval(this.timer);this.timer=setInterval(()=>this.tick(),25);return true;},
+  stop(){this.on=false;clearInterval(this.timer);try{if(navigator.audioSession)navigator.audioSession.type='playback';}catch(e){}
+    try{this.src&&this.src.disconnect();this.mute&&this.mute.disconnect();}catch(e){}
+    if(this.stream)this.stream.getTracks().forEach(t=>t.stop());this.stream=null;$('#micBtn').classList.remove('on');$('#micBtn').setAttribute('aria-pressed','false');$('#micLvl').style.width='0%';},
+  setGain(g){const cfg=this.cfg();const r=g/cfg.gain;cfg.gain=g;if(this.g)this.g.gain.value=g;this.noise*=r;},
+  gate(){return Math.max(this.noise*3,0.0006);},
   tick(){
-    const b=this.buf;this.an.getFloatTimeDomainData(b);let rms=0;for(let i=0;i<b.length;i++)rms+=b[i]*b[i];rms=Math.sqrt(rms/b.length);
-    const now=performance.now();const onset=rms>0.012&&rms>this.prevRms*1.7;this.prevRms=rms*0.6+this.prevRms*0.4;
-    if(rms<0.008){if(++this.quiet>4){this.cur=-1;this.cand=-1;}$('#micLvl').style.width='0%';return;}
-    this.quiet=0;$('#micLvl').style.width=Math.min(100,rms*600)+'%';
-    const f=this.yin(b,AudioEng.ctx.sampleRate);if(!f)return;
-    const m=Math.round(12*Math.log2(f/440)+69);if(m<LOW-12||m>HIGH+12)return;
+    if(!this.an)return;const b=this.buf;this.an.getFloatTimeDomainData(b);let s=0;for(let i=0;i<b.length;i++)s+=b[i]*b[i];const rms=Math.sqrt(s/b.length);const now=performance.now();
+    if(!this.noise)this.noise=rms;
+    if(rms<this.noise*1.6)this.noise=this.noise*0.94+rms*0.06;else this.noise*=1.0004;
+    if(now-this.startAt<350){this.noise=Math.min(this.noise||rms,rms)||rms;}
+    const gate=this.gate();this.last.rms=rms;
+    $('#micLvl').style.width=Math.max(0,Math.min(100,(20*Math.log10(rms+1e-9)+66)*1.6))+'%';
+    if(rms<gate){if(++this.quiet>3){this.cur=-1;this.cand=-1;this.armed=true;this.valley=rms;}this.last.m=-1;this.last.clar=0;if(this.onTick)this.onTick();return;}
+    this.quiet=0;
+    if(!this.armed){this.peak=Math.max(this.peak,rms);if(rms<this.peak*0.8){this.armed=true;this.valley=rms;}}
+    else this.valley=Math.min(this.valley,rms);
+    if(this.armed&&rms>this.valley*1.5&&now-this.lastFire>90){this.pending=now;this.armed=false;this.peak=rms;this.cand=-1;this.candN=0;}
+    const p=this.yin(b,AudioEng.ctx.sampleRate);let m=-1;
+    if(p.f){m=Math.round(12*Math.log2(p.f/440)+69);if(m<LOW-12||m>HIGH+12)m=-1;}
+    this.last.m=m;this.last.clar=p.c;if(this.onTick)this.onTick();
+    if(m<0){this.candN=0;return;}
     if(m===this.cand)this.candN++;else{this.cand=m;this.candN=1;}
-    if(onset)this.onsetAt=now;
-    const fresh=this.onsetAt&&now-this.onsetAt<160;
-    if(this.candN>=2&&(m!==this.cur||fresh)&&now-this.lastFire>120){
-      if((AudioEng.suppress[m%12]||0)>now)return;
-      this.cur=m;this.lastFire=now;this.onsetAt=0;
-      const mm=Math.min(HIGH,Math.max(LOW,m));Input.press(mm,'mic');setTimeout(()=>{if(Input.held.has(mm))Input.release(mm,'mic');},180);
-    }
+    const fresh=this.pending&&now-this.pending<260;
+    const fire=(this.candN>=2&&fresh)||(this.candN>=3&&m!==this.cur&&now-this.lastFire>150);
+    if(fire){if((AudioEng.suppress[m%12]||0)>now){this.pending=0;return;}
+      this.cur=m;this.lastFire=now;this.pending=0;if(this.armed){this.armed=false;this.peak=rms;}
+      const mm=Math.min(HIGH,Math.max(LOW,m));Input.press(mm,'mic');setTimeout(()=>{if(Input.held.has(mm))Input.release(mm,'mic');},170);}
+    else if(this.pending&&!fresh)this.pending=0;
   },
-  yin(x,sr){const W=1024,minT=Math.floor(sr/1300),maxT=Math.min(W-1,Math.floor(sr/60));const d=new Float32Array(maxT+1);
-    for(let t=minT;t<=maxT;t++){let s=0;for(let i=0;i<W;i++){const v=x[i]-x[i+t];s+=v*v;}d[t]=s;}
+  yin(x,sr){const W=1024,minT=Math.floor(sr/1400),maxT=Math.min(W-1,Math.floor(sr/62),x.length-W-1);const o=x.length-W-maxT-1;const d=new Float32Array(maxT+1);
+    for(let t=minT;t<=maxT;t++){let s=0;for(let i=o;i<o+W;i++){const v=x[i]-x[i+t];s+=v*v;}d[t]=s;}
     let run=0;const cm=new Float32Array(maxT+1);
     for(let t=1;t<=maxT;t++){if(t<minT){cm[t]=1;continue;}run+=d[t];cm[t]=run>0?d[t]*(t-minT+1)/run:1;}
-    let tau=-1;for(let t=minT+1;t<maxT;t++){if(cm[t]<0.14){while(t+1<maxT&&cm[t+1]<cm[t])t++;tau=t;break;}}
-    if(tau<0)return 0;const a=cm[tau-1],b=cm[tau],c=cm[tau+1];const den=a-2*b+c;const shift=den?0.5*(a-c)/den:0;return sr/(tau+shift);}
+    let tau=-1;for(let t=minT+1;t<maxT;t++){if(cm[t]<0.2){while(t+1<maxT&&cm[t+1]<cm[t])t++;tau=t;break;}}
+    if(tau<0){let mi=1,mt=-1;for(let t=minT+1;t<maxT;t++)if(cm[t]<mi){mi=cm[t];mt=t;}if(mi<0.32)tau=mt;}
+    if(tau<1)return {f:0,c:0};const a=cm[tau-1],b=cm[tau],c=cm[tau+1];const den=a-2*b+c;const sh=den?0.5*(a-c)/den:0;return {f:sr/(tau+sh),c:Math.max(0,1-b)};}
 };
 
+/* ===== Bảng Chỉnh micro ===== */
+const MicPanel={raf:0,
+  async open(){const dlg=$('#micDlg');const cfg=Mic.cfg();
+    dlg.innerHTML=`<form method="dialog"><h2>Chỉnh micro</h2>
+      <p class="sm muted">Micro chỉ nghe được <b>một nốt mỗi lúc</b>. Đánh từng nốt rõ ràng; hợp âm thì bấm trên màn hình.</p>
+      <label class="field col">Micro đang dùng<select id="micDev"><option value="">Micro mặc định của máy</option></select></label>
+      <div class="meterbox" aria-hidden="true"><div class="mfill" id="mFill"></div><div class="mgate" id="mGate" title="Ngưỡng nhận nốt"></div></div>
+      <p class="sm" id="mRead" aria-live="polite">Đang chờ micro…</p>
+      <label class="field">Độ nhạy <input type="range" id="micGain" min="0" max="100" value="${Math.round(Math.log(cfg.gain)/Math.log(40)*100)}" style="flex:1"> <output id="micGainV">×${cfg.gain.toFixed(1)}</output></label>
+      <div class="controls"><button class="btn primary" type="button" data-mic="cal">Tự hiệu chỉnh (8 giây)</button><span class="sm" id="micCalMsg" aria-live="polite"></span></div>
+      <details class="sm"><summary><b>Vẫn nhận kém? Kiểm tra trên máy</b></summary><ul>
+        <li><b>Mac:</b> Cài đặt hệ thống → Âm thanh → Đầu vào: chọn đúng micro (micro MacBook, không phải AirPods), kéo <b>Âm lượng đầu vào</b> lên khoảng 3/4.</li>
+        <li><b>Chế độ micro:</b> khi micro đang bật (chấm cam trên thanh menu), mở Trung tâm điều khiển → <b>Chế độ micro</b> → chọn <b>Phổ rộng</b> (Wide Spectrum) hoặc Tiêu chuẩn. Chế độ <b>Tách giọng</b> (Voice Isolation) sẽ lọc mất tiếng đàn. iPad cũng có mục này trong Trung tâm điều khiển.</li>
+        <li>Đặt máy cách loa đàn 30–50 cm, vặn âm lượng đàn lớn hơn, tắt quạt, điều hòa hướng thẳng vào máy.</li>
+        <li>Dùng Chrome trên Mac. Tắt các tab khác đang dùng micro (Zoom, Meet…).</li>
+        <li>Cách chắc nhất: nối dây từ cổng PHONES/OUTPUT của đàn vào một bộ chuyển âm thanh USB có cổng vào micro/line, rồi chọn bộ chuyển đó ở ô “Micro đang dùng”. Khi cắm dây, loa đàn tắt nên bạn nghe qua loa máy.</li></ul></details>
+      <div class="controls end"><button class="btn" value="close">Xong</button></div></form>`;
+    if(dlg.showModal)dlg.showModal();else dlg.setAttribute('open','');
+    if(!Mic.on){const ok=await Mic.start();if(!ok)return;}
+    await this.devices();
+    $('#micDev').addEventListener('change',async e=>{cfg.device=e.target.value;Store.save();Mic.stop();await Mic.start();});
+    $('#micGain').addEventListener('input',e=>{const g=Math.max(1,Math.round(Math.pow(40,e.target.value/100)*10)/10);Mic.setGain(g);$('#micGainV').textContent='×'+g.toFixed(1);});
+    $('#micGain').addEventListener('change',()=>Store.save());
+    dlg.querySelector('[data-mic=cal]').addEventListener('click',()=>this.calibrate());
+    dlg.addEventListener('close',()=>{cancelAnimationFrame(this.raf);Mic.onTick=null;},{once:true});
+    const db=r=>Math.max(0,Math.min(100,(20*Math.log10(r+1e-9)+66)*1.6));
+    Mic.onTick=()=>{};const loop=()=>{if(!dlg.open)return;const L=Mic.last;$('#mFill').style.width=db(L.rms)+'%';$('#mGate').style.left=db(Mic.gate())+'%';
+      $('#mRead').innerHTML=L.rms<Mic.gate()?'Đang yên lặng (dưới vạch ngưỡng). Đánh thử một nốt.':L.m>=0?`Nghe thấy: <b>${midiName(L.m)}</b> (${pcName(L.m,'solfege')}) · độ rõ ${Math.round(L.clar*100)}%`:'Có tiếng nhưng chưa rõ cao độ (tiếng ồn hoặc nhiều nốt cùng lúc).';
+      this.raf=requestAnimationFrame(loop);};loop();},
+  async devices(){try{const list=(await navigator.mediaDevices.enumerateDevices()).filter(d=>d.kind==='audioinput'&&d.deviceId&&d.deviceId!=='default');const sel=$('#micDev');if(!sel)return;
+    sel.innerHTML='<option value="">Micro mặc định của máy</option>'+list.map((d,i)=>`<option value="${esc(d.deviceId)}" ${d.deviceId===Mic.cfg().device?'selected':''}>${esc(d.label||'Micro '+(i+1))}</option>`).join('');}catch(e){}},
+  async calibrate(){const msg=$('#micCalMsg');const cfg=Mic.cfg();if(!Mic.on&&!(await Mic.start()))return;
+    const sample=(ms)=>new Promise(res=>{const v=[];const t0=performance.now();const iv=setInterval(()=>{v.push(Mic.last.rms/cfg.gain);if(performance.now()-t0>ms){clearInterval(iv);res(v);}},25);});
+    msg.textContent='Bước 1/2: giữ yên lặng 2 giây…';const q=await sample(2000);q.sort((a,b)=>a-b);const noise=q[Math.floor(q.length*0.2)]||0.0002;
+    msg.textContent='Bước 2/2: đánh Đô giữa (C4) 4–5 lần, mỗi lần cách nhau 1 giây…';const heardBefore=[];const lis=(m,s)=>{if(s==='mic')heardBefore.push(m);};Input.listeners.add(lis);
+    const v=await sample(6000);Input.listeners.delete(lis);v.sort((a,b)=>a-b);const peak=v[Math.floor(v.length*0.95)]||noise;
+    const snr=peak/Math.max(noise,1e-6);
+    if(snr<3){msg.innerHTML='Tiếng đàn gần bằng tiếng ồn nên chưa hiệu chỉnh được. Đặt máy gần loa đàn hơn, vặn to đàn, rồi thử lại.';return;}
+    const g=Math.max(1,Math.min(40,Math.round(0.2/peak*10)/10));Mic.setGain(g);cfg.noise=noise;cfg.cal=true;Mic.noise=noise*g;Store.save();
+    const sl=$('#micGain');if(sl){sl.value=Math.round(Math.log(g)/Math.log(40)*100);$('#micGainV').textContent='×'+g.toFixed(1);}
+    msg.innerHTML=`Xong! Độ nhạy ×${g.toFixed(1)}. Tiếng đàn to hơn tiếng ồn ${Math.round(20*Math.log10(snr))} dB${snr<8?' (hơi sát, nên đặt máy gần đàn hơn)':' (tốt)'}. Nhận được ${heardBefore.length} nốt khi bạn đánh.`;}
+};
 /* ===== Mô phỏng bàn tay trên phím ===== */
 const Hand={spec:null,
   show(spec){this.spec=spec?(Array.isArray(spec)?spec:[spec]):null;this.redraw();},clear(){this.spec=null;this.redraw();},
@@ -1695,6 +1765,7 @@ const App={dockH(){document.documentElement.style.setProperty('--dockH',($('#doc
     $('#vol').addEventListener('input',e=>{AudioEng.setVol(+e.target.value);});
     $('#vol').addEventListener('change',()=>Store.save());
     $('#micBtn').addEventListener('click',()=>Mic.toggle());
+    $('#micSet').addEventListener('click',()=>MicPanel.open());
     const bb=$('#bigBtn');bb.setAttribute('aria-pressed',!!Store.s.settings.big);bb.addEventListener('click',()=>{Store.s.settings.big=!Store.s.settings.big;bb.setAttribute('aria-pressed',Store.s.settings.big);Store.save();KB.layout();setTimeout(()=>KB.scrollTo(55,72,false),30);});
     document.addEventListener('change',e=>{if(e.target.id==='bkFile'&&e.target.files[0]){e.target.files[0].text().then(t=>{$('#bkIn').value=t;Backup.doImport(t);});}});
     if(OFFLINE&&'serviceWorker' in navigator&&location.protocol==='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});$('#midiBtn').addEventListener('click',()=>Midi.connect());
