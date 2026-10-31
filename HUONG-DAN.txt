@@ -1,0 +1,32 @@
+PHÍM NHÀ – lớp piano & organ riêng của bạn
+==========================================
+
+TRÊN MAC
+1. Để thư mục PhimNha ở một chỗ cố định, ví dụ thư mục Tài liệu (Documents).
+   Tiến độ gắn với vị trí file: di chuyển file đi chỗ khác thì tiến độ cũ có thể không hiện.
+2. Chuột phải vào index.html > Mở bằng (Open With) > Google Chrome.
+3. Bấm nút Micro trên thanh đàn, chọn Cho phép.
+   Nếu Chrome không hỏi: Cài đặt hệ thống > Quyền riêng tư & Bảo mật > Micrô > bật Google Chrome.
+
+TRÊN IPAD (cần đưa app lên một địa chỉ web https, miễn phí qua GitHub Pages)
+iPad không chạy được file HTML tải về: ứng dụng Tệp chỉ xem trước, không chạy nút bấm và micro.
+1. Trên Mac vào github.com, tạo tài khoản miễn phí.
+2. Bấm dấu + ở góc trên > New repository. Tên: phim-nha. Chọn Public.
+   Tích "Add a README file". Bấm Create repository.
+3. Trong repo: Add file > Upload files. Kéo 5 file trong thư mục PhimNha vào:
+   index.html, sw.js, manifest.webmanifest, icon-180.png, icon-512.png
+   (kéo các file, không kéo cả thư mục). Bấm Commit changes.
+4. Settings > Pages. Mục Branch chọn main, thư mục / (root), bấm Save.
+   Đợi 1–2 phút, tải lại trang Settings > Pages sẽ thấy địa chỉ
+   https://TÊN-CỦA-BẠN.github.io/phim-nha/
+5. Trên iPad mở địa chỉ đó bằng Safari > nút Chia sẻ > Thêm vào Màn hình chính.
+   Mở app từ biểu tượng Phím Nhà, cho phép micro khi được hỏi.
+   Sau lần mở đầu tiên có mạng, app mở được cả khi không có mạng.
+Địa chỉ này cũng dùng được trên Mac (Safari hoặc Chrome).
+Lưu ý: repo Public nghĩa là ai có địa chỉ cũng mở được app. App không chứa dữ liệu
+cá nhân; tiến độ chỉ nằm trên từng máy.
+
+CHUYỂN TIẾN ĐỘ GIỮA MAC VÀ IPAD
+Tab Hôm nay > Sao lưu và chuyển tiến độ.
+Máy cũ: Chép mã sao lưu. Máy mới: dán mã, bấm Nhập tiến độ. Tiến độ được gộp lại.
+Mac và iPad cùng Apple ID: chép ở Mac rồi dán thẳng trên iPad (Clipboard chung).

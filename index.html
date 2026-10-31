@@ -173,6 +173,12 @@ details.panel summary{cursor:pointer}
 .stepchip.cur{background:var(--ink);color:var(--surface);border-color:var(--ink)}
 .stepcard{border-top:1px solid var(--line);padding-top:8px}.stepcard h3{margin:4px 0 6px}.stepcard p{max-width:68ch}
 .fb2{border:1px solid var(--line);border-left:4px solid var(--rh);border-radius:0 10px 10px 0;background:var(--surface);padding:10px 14px;margin:10px 0}.fb2 ul{margin:6px 0 0;padding-left:18px}.fb2 li{margin:5px 0}
+.sebars{display:flex;flex-direction:column;gap:6px;margin:8px 0}.sebar{display:flex;flex-wrap:wrap;gap:4px;align-items:center;border:1px solid var(--line);border-radius:8px;padding:5px 8px}.sebar.open{border-color:var(--lantern)}.sebar .bn{font-size:.72rem;color:var(--muted);min-width:24px}
+.chip sup{font-size:.62rem;color:var(--rh);margin-left:2px}
+.wish{list-style:none;padding:0;margin:4px 0 10px}.wish li{border-bottom:1px solid var(--line);padding:6px 0}#wishBox h4{margin:14px 0 2px;font-size:.95rem}
+a.btn{text-decoration:none;display:inline-block}
+.partlist{display:flex;flex-direction:column;gap:3px;max-height:220px;overflow-y:auto;border:1px solid var(--line);border-radius:8px;padding:6px 10px}
+b.ok{color:var(--ok)}b.warn{color:var(--lantern)}b.bad,span.bad{color:var(--bad)}
 .acts{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .meterbox{position:relative;height:14px;background:var(--surface2);border:1px solid var(--line);border-radius:7px;overflow:hidden;margin:12px 0 4px}
 .mfill{height:100%;width:0;background:linear-gradient(90deg,var(--ok),var(--lantern))}
@@ -332,15 +338,19 @@ function parseTrack(str,hand,fmap){
 /* ===== Generators for polyphonic pieces ===== */
 function genPrelude(){
   const B=[['C4','E4','G4','C5','E5'],['C4','D4','A4','D5','F5'],['B3','D4','G4','D5','F5'],['C4','E4','G4','C5','E5'],
-           ['C4','E4','A4','E5','A5'],['C4','D4','F#4','A4','D5'],['B3','D4','G4','D5','G5'],['B3','C4','E4','G4','C5']];
+           ['C4','E4','A4','E5','A5'],['C4','D4','F#4','A4','D5'],['B3','D4','G4','D5','G5'],['B3','C4','E4','G4','C5'],
+           ['A3','C4','E4','G4','C5'],['D3','A3','D4','F#4','C5'],['G3','B3','D4','G4','B4'],['G3','Bb3','E4','G4','C#5'],
+           ['F3','A3','D4','A4','D5'],['F3','Ab3','D4','F4','B4'],['E3','G3','C4','G4','C5'],['E3','F3','A3','C4','F4'],
+           ['D3','F3','A3','C4','F4'],['G2','D3','G3','B3','F4'],['C3','E3','G3','C4','E4']];
   const ev=[];
   B.forEach((bar,i)=>{const n=bar.map(nameToMidi);
     for(const half of [0,2]){const t=i*4+half;
       ev.push({t,d:2,m:n[0],h:'L',f:5});
-      ev.push({t:t+0.25,d:1.75,m:n[1],h:'L',f:(n[1]-n[0])<=2?4:3});
-      [2,3,4,2,3,4].forEach((k,j)=>ev.push({t:t+0.5+j*0.25,d:0.25,m:n[k],h:'R',f:[1,3,5][k-2]}));
+      const iv=n[1]-n[0];ev.push({t:t+0.25,d:1.75,m:n[1],h:'L',f:iv<=2?4:iv<=4?3:2});
+      const rf=(n[4]-n[2])<=8?[1,2,4]:[1,3,5];
+      [2,3,4,2,3,4].forEach((k,j)=>ev.push({t:t+0.5+j*0.25,d:0.25,m:n[k],h:'R',f:rf[k-2]}));
     }});
-  return {ev,len:32};
+  return {ev,len:B.length*4};
 }
 function genFurElise(){
   const ev=[];const R=(t,n,d,f)=>ev.push({t,d,m:nameToMidi(n),h:'R',f});const L=(t,n,d,f)=>ev.push({t,d,m:nameToMidi(n),h:'L',f});
@@ -377,9 +387,45 @@ function genEtude(){
   return {ev:R.ev.concat(ev),len:32};
 }
 
+function genMoonlight(){
+  const ev=[];const G=[['G#3','C#4','E4'],['A3','C#4','E4'],['A3','D4','F#4'],['G#3','C4','F#4'],['G#3','C#4','D#4'],['F#3','C4','D#4']];
+  const bars=[[0,0,0,0],[0,0,0,0],[1,1,2,2],[3,0,4,5]];
+  bars.forEach((bt,b)=>bt.forEach((gi,k)=>{G[gi].forEach((n,j)=>ev.push({t:b*4+k+j/3,d:1/3,m:nameToMidi(n),h:'R',f:gi===3&&j===2?5:[1,2,4][j]}));}));
+  [0,1].forEach(k=>G[0].forEach((n,j)=>ev.push({t:16+k+j/3,d:1/3,m:nameToMidi(n),h:'R',f:[1,2,4][j]})));
+  ['G#3','C#4','E4'].forEach((n,j)=>ev.push({t:18,d:2,m:nameToMidi(n),h:'R',f:[1,2,4][j]}));
+  [['C#3',0,4,1],['B2',4,4,2],['A2',8,2,3],['F#2',10,2,5],['G#2',12,4,4],['C#3',16,4,1]].forEach(([n,t,dd,f])=>ev.push({t,d:dd,m:nameToMidi(n),h:'L',f}));
+  return {ev,len:20};
+}
 const C_POS={C4:1,D4:2,E4:3,F4:4,G4:5};
 const C_POS_L={C3:5,D3:4,E3:3,F3:2,G3:1};
 const SONGS=[
+ {id:'x-mirror',ex:1,title:'Hai tay soi gương',by:'Bài luyện ngón',level:1,tags:['Luyện ngón','Hai tay'],tempo:66,beats:4,hands:'RL',fR:C_POS,fL:C_POS_L,
+  R:'C4 D4 E4 F4 | G4 F4 E4 D4 | C4:4',L:'G3 F3 E3 D3 | C3 D3 E3 F3 | G3:4',
+  tip:'Hai tay luôn dùng cùng số ngón: 1 với 1, 2 với 2… nhưng đi ngược chiều nhau. Đây là kiểu hai tay dễ nhất cho não.'},
+ {id:'x-parallel',ex:2,title:'Hai tay song song',by:'Bài luyện ngón',level:1,tags:['Luyện ngón','Hai tay'],tempo:66,beats:4,hands:'RL',fR:C_POS,fL:C_POS_L,
+  R:'C4 D4 E4 F4 | G4 F4 E4 D4 | C4 E4 G4 E4 | C4:4',L:'C3 D3 E3 F3 | G3 F3 E3 D3 | C3 E3 G3 E3 | C3:4',
+  tip:'Cùng đi một hướng nhưng khác số ngón: tay phải 1→5, tay trái 5→1. Đếm to “một – hai – ba – bốn”.'},
+ {id:'x-holdl',ex:3,title:'Tay trái giữ, tay phải đi',by:'Bài luyện ngón',level:1,tags:['Luyện ngón','Hai tay'],tempo:66,beats:4,hands:'RL',fR:C_POS,
+  R:'C4 D4 E4 F4 | G4 G4 G4:2 | F4:1 E4 D4 E4 | C4:4',L:'C3:4:5 | E3:4:3 | G3:4:1 | C3:4:5',
+  tip:'Tay trái chỉ bấm một nốt rồi giữ suốt ô nhịp, tay phải đi 4 nốt. Bước đầu tiên để hai tay làm hai việc khác nhau.'},
+ {id:'x-holdr',ex:4,title:'Tay phải giữ, tay trái đi',by:'Bài luyện ngón',level:2,tags:['Luyện ngón','Hai tay'],tempo:66,beats:4,hands:'RL',fL:C_POS_L,
+  R:'E4:4:3 | G4:4:5 | E4:2:3 D4:2:2 | C4:4:1',L:'C3 D3 E3 F3 | G3 F3 E3 D3 | C3 E3 G3 E3 | C3:4',
+  tip:'Ngược lại bài trước: giờ tay trái là tay bận rộn. Tay trái thường yếu hơn nên bài này khó hơn một chút.'},
+ {id:'x-echo',ex:5,title:'Hỏi – đáp: hai tay thay phiên',by:'Bài luyện ngón',level:2,tags:['Luyện ngón','Hai tay'],tempo:72,beats:4,hands:'RL',fR:C_POS,fL:C_POS_L,
+  R:'C4 E4 G4:2 | -:4 | D4:1 F4 E4 D4 | -:4 | E4:1 D4 C4:2 | -:4',L:'-:4 | C3:1 E3 G3:2 | -:4 | D3:1 F3 E3 D3 | -:4 | E3:1 D3 C3:2',
+  tip:'Tay phải “hỏi”, tay trái “đáp” lại y hệt thấp hơn một quãng tám. Luyện chuyển sự chú ý giữa hai tay đúng nhịp.'},
+ {id:'x-chord',ex:6,title:'Hợp âm tay trái, giai điệu tay phải',by:'Bài luyện ngón',level:2,tags:['Luyện ngón','Hai tay'],tempo:66,beats:4,hands:'RL',fR:C_POS,
+  R:'E4 D4 E4:2 | F4:1 E4 F4:2 | E4:1 D4 C4:2 | D4:1 E4 D4:2 | C4:4',
+  L:'C3+E3+G3:4:5+3+1 | C3+F3+A3:4:5+2+1 | C3+E3+G3:4:5+3+1 | B2+D3+G3:4:5+3+1 | C3+E3+G3:4:5+3+1',
+  tip:'Kiểu đệm phổ biến nhất: tay trái bấm hợp âm ở phách 1 rồi giữ, tay phải hát giai điệu. Hợp âm C – F – C – G – C.'},
+ {id:'x-arp',ex:7,title:'Tay trái rải 1–5–8, tay phải nốt dài',by:'Bài luyện ngón',level:3,tags:['Luyện ngón','Hai tay','Kiểu nhạc phim'],tempo:72,beats:4,hands:'RL',
+  R:'E4:4:3 | D4:4:2 | E4:4:3 | F4:4:4 | E4:4:3',
+  L:'C3:0.5:5 G3:0.5:2 C4:0.5:1 G3:0.5:2 C3:0.5:5 G3:0.5:2 C4:0.5:1 G3:0.5:2 | G2:0.5:5 D3:0.5:2 G3:0.5:1 D3:0.5:2 G2:0.5:5 D3:0.5:2 G3:0.5:1 D3:0.5:2 | A2:0.5:5 E3:0.5:2 A3:0.5:1 E3:0.5:2 A2:0.5:5 E3:0.5:2 A3:0.5:1 E3:0.5:2 | F2:0.5:5 C3:0.5:2 F3:0.5:1 C3:0.5:2 F2:0.5:5 C3:0.5:2 F3:0.5:1 C3:0.5:2 | C3:0.5:5 G3:0.5:2 C4:0.5:1 G3:0.5:2 C3:2:5',
+  tip:'Kỹ thuật đệm gặp trong rất nhiều bản piano nhạc phim: tay trái rải đều, tay phải giữ nốt dài. Tay trái phải tự chạy, không cần nhìn.'},
+ {id:'x-hanon',ex:8,title:'Hanon số 1 (bản chậm)',by:'Charles-Louis Hanon, 1873',level:3,tags:['Luyện ngón','Hai tay'],tempo:60,beats:4,hands:'RL',
+  R:'C4:0.5:1 E4:0.5:2 F4:0.5:3 G4:0.5:4 A4:0.5:5 G4:0.5:4 F4:0.5:3 E4:0.5:2 | D4:0.5:1 F4:0.5:2 G4:0.5:3 A4:0.5:4 B4:0.5:5 A4:0.5:4 G4:0.5:3 F4:0.5:2 | E4:0.5:1 G4:0.5:2 A4:0.5:3 B4:0.5:4 C5:0.5:5 B4:0.5:4 A4:0.5:3 G4:0.5:2 | F4:0.5:1 A4:0.5:2 B4:0.5:3 C5:0.5:4 D5:0.5:5 C5:0.5:4 B4:0.5:3 A4:0.5:2 | C4:4:1',
+  L:'C3:0.5:5 E3:0.5:4 F3:0.5:3 G3:0.5:2 A3:0.5:1 G3:0.5:2 F3:0.5:3 E3:0.5:4 | D3:0.5:5 F3:0.5:4 G3:0.5:3 A3:0.5:2 B3:0.5:1 A3:0.5:2 G3:0.5:3 F3:0.5:4 | E3:0.5:5 G3:0.5:4 A3:0.5:3 B3:0.5:2 C4:0.5:1 B3:0.5:2 A3:0.5:3 G3:0.5:4 | F3:0.5:5 A3:0.5:4 B3:0.5:3 C4:0.5:2 D4:0.5:1 C4:0.5:2 B3:0.5:3 A3:0.5:4 | C3:4:5',
+  tip:'Bài luyện ngón kinh điển nhất thế giới: hai tay cùng một khuôn, mỗi ô dời lên một phím. Tập thật chậm, đều, ngón nhấc rõ.'},
  {id:'mary',title:'Mary Had a Little Lamb',by:'Dân ca Mỹ, 1830',level:1,tags:['Thiếu nhi'],tempo:92,beats:4,hands:'R',fR:C_POS,
   R:'E4 D4 C4 D4 | E4 E4 E4:2 | D4:1 D4 D4:2 | E4:1 G4 G4:2 | E4:1 D4 C4 D4 | E4 E4 E4 E4 | D4 D4 E4 D4 | C4:4',
   tip:'Cả bài nằm gọn trong vị trí Đô: ngón 1 trên Đô giữa, không cần dời tay.'},
@@ -425,17 +471,20 @@ const SONGS=[
   gen:genEtude,tip:'Vòng hợp âm IV–V–iii–vi và tay trái rải 1–5–8: hai kỹ thuật gặp rất nhiều trong các bản phối piano nhạc phim hoạt hình.'},
  {id:'gymno',title:'Gymnopédie No.1 (câu mở đầu)',by:'Erik Satie, 1888',level:4,tags:['Cổ điển','Kiểu nhạc phim','Hai tay'],tempo:66,beats:3,hands:'RL',
   gen:genGymno,tip:'Tay trái nhảy từ nốt trầm lên hợp âm. Chơi thật chậm, nhẹ, để từng hợp âm ngân hết.'},
- {id:'minuet',title:'Minuet in G (tay trái đơn giản)',by:'Christian Petzold, 1725',level:4,tags:['Cổ điển','Hai tay'],tempo:100,beats:3,hands:'RL',
-  R:'D5:1:5 G4:0.5:1 A4:0.5:2 B4:0.5:3 C5:0.5:4 | D5:1:5 G4:1:1 G4:1:1 | E5:1 C5:0.5 D5 E5 F#5 | G5:1 G4 G4 | C5:1 D5:0.5 C5 B4 A4 | B4:1 C5:0.5 B4 A4 G4 | F#4:1 G4:0.5 A4 B4 G4 | A4:3',
-  L:'G3+B3:2 A3:1 | B3:3 | C4:3 | B3:3 | A3:3 | G3:3 | D4:3 | D3:3',tip:'Tay trái ở đây được rút gọn thành một nốt mỗi ô nhịp.'},
+ {id:'minuet',title:'Minuet in G – đoạn A đủ 16 ô (tay trái đơn giản)',by:'Christian Petzold, 1725',level:4,tags:['Cổ điển','Hai tay'],tempo:100,beats:3,hands:'RL',
+  R:'D5:1:5 G4:0.5:1 A4:0.5:2 B4:0.5:3 C5:0.5:4 | D5:1:5 G4:1:1 G4:1:1 | E5:1 C5:0.5 D5 E5 F#5 | G5:1 G4 G4 | C5:1 D5:0.5 C5 B4 A4 | B4:1 C5:0.5 B4 A4 G4 | F#4:1 G4:0.5 A4 B4 G4 | A4:3 | D5:1:5 G4:0.5:1 A4:0.5:2 B4:0.5:3 C5:0.5:4 | D5:1:5 G4:1:1 G4:1:1 | E5:1 C5:0.5 D5 E5 F#5 | G5:1 G4 G4 | C5:1 D5:0.5 C5 B4 A4 | B4:1 C5:0.5 B4 A4 G4 | A4:1 B4:0.5 A4 G4 F#4 | G4:3',
+  L:'G3+B3:2 A3:1 | B3:3 | C4:3 | B3:3 | A3:3 | G3:3 | D4:3 | D3:3 | G3+B3:2 A3:1 | B3:3 | C4:3 | B3:3 | A3:3 | G3:3 | D3:3 | G2:3',tip:'Tay trái ở đây được rút gọn thành một nốt mỗi ô nhịp.'},
+ {id:'moon',title:'Moonlight Sonata (mở đầu, giản lược)',by:'Beethoven, 1801',level:3,tags:['Cổ điển','Hai tay','Kiểu nhạc phim'],tempo:54,beats:4,hands:'RL',gen:genMoonlight,
+  tip:'Mỗi phách có 3 nốt đều nhau (chùm ba): đếm “một-và-a, hai-và-a”. Chơi thật nhẹ, chậm, như tiếng mưa.'},
  {id:'elise',title:'Für Elise (đoạn mở đầu)',by:'Beethoven, 1810',level:5,tags:['Cổ điển','Hai tay'],tempo:72,beats:1.5,pickup:0.5,hands:'RL',
   gen:genFurElise,tip:'Hai tay nối tiếp nhau như một dòng chảy: tay trái rải La–Mi–La rồi tay phải đi tiếp Đô–Mi–La.'},
- {id:'prelude',title:'Prelude in C (8 ô nhịp đầu)',by:'J.S. Bach, 1722',level:5,tags:['Cổ điển','Hai tay'],tempo:60,beats:4,hands:'RL',
+ {id:'prelude',title:'Prelude in C (19 ô nhịp đầu)',by:'J.S. Bach, 1722',level:5,tags:['Cổ điển','Hai tay'],tempo:60,beats:4,hands:'RL',
   gen:genPrelude,tip:'Mỗi ô nhịp là một hợp âm được rải. Tập riêng từng hợp âm dạng khối trước, rồi mới rải.'},
 ];
 function compileSong(s){
   let ev=[],len=0;
   if(s.gen){const g=s.gen();ev=g.ev;len=g.len;}
+  else if(s.evs){ev=s.evs.map(([t,d,m,h,f])=>({t,d,m,h,f:f||0}));len=s.len||ev.reduce((a,e)=>Math.max(a,e.t+e.d),0);}
   else{
     if(s.R){const r=parseTrack(s.R,'R',s.fR);ev=ev.concat(r.ev);len=Math.max(len,r.len);}
     if(s.L){const l=parseTrack(s.L,'L',s.fL);ev=ev.concat(l.ev);len=Math.max(len,l.len);}
@@ -444,6 +493,16 @@ function compileSong(s){
   ev.forEach((e,i)=>e.i=i);
   return {ev,len};
 }
+
+/* ===== Ô nhịp: hỗ trợ ô lấy đà và số chỉ nhịp thay đổi ===== */
+function songLen(s){return (s.compiled||(s.compiled=compileSong(s))).len;}
+function barT(s){if(s._barT)return s._barT;let a;
+  if(s.barT&&s.barT.length)a=s.barT.slice();else{const len=songLen(s),pk=s.pickup||0,b=s.beats||4;a=[];if(pk>1e-6)a.push(0);for(let t=pk;t<len-1e-6;t+=b)a.push(+t.toFixed(6));if(!a.length)a.push(0);}
+  s._barT=a;return a;}
+function barNum0(s){return (s.pickup||0)>1e-6?0:1;}
+function barStartOf(s,k){const a=barT(s),i=k-barNum0(s);if(i<=0)return i<0?0:a[0];if(i>=a.length)return songLen(s);return a[i];}
+function barOfT(s,t){const a=barT(s);let lo=0,hi=a.length-1;while(lo<hi){const mid=(lo+hi+1)>>1;if(a[mid]<=t+1e-6)lo=mid;else hi=mid-1;}return lo+barNum0(s);}
+function barCount(s){return barT(s).length-1+barNum0(s);}
 
 
 'use strict';
@@ -634,8 +693,10 @@ const Midi={sound:true,
 };
 
 /* ===== Micro: nghe đàn thật (một nốt mỗi lúc) ===== */
-const Mic={on:false,stream:null,an:null,buf:null,timer:0,cur:-1,cand:-1,candN:0,lastFire:0,noise:0,armed:true,peak:0,valley:1,pending:0,quiet:0,last:{rms:0,m:-1,clar:0},
-  cfg(){const s=Store.s.settings;if(!s.mic)s.mic={gain:4,noise:0,device:'',cal:false};return s.mic;},
+const Mic={on:false,stream:null,an:null,buf:null,timer:0,cur:-1,cand:-1,candN:0,lastFire:0,noise:0,armed:true,peak:0,valley:1,pending:0,quiet:0,last:{rms:0,m:-1,clar:0},humC:{},qn:0,
+  cfg(){const s=Store.s.settings;if(!s.mic)s.mic={gain:4,noise:0,device:'',cal:false};if(!s.mic.filter)s.mic.filter=2;if(!s.mic.hum)s.mic.hum=[];return s.mic;},
+  P(){const f=this.cfg().filter;return {k:[2.5,3.5,4.2][f-1],clar:[0.7,0.82,0.86][f-1],low:[1,1.5,2][f-1],slide:f===1};},
+  isHum(m){return (this.humC[m]||0)>6||this.cfg().hum.includes(m);},
   async toggle(){if(this.on)return this.stop();await this.start();},
   async start(){AudioEng.init();
     if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){toast('Trình duyệt không cho dùng micro ở đây.');return false;}
@@ -656,7 +717,7 @@ const Mic={on:false,stream:null,an:null,buf:null,timer:0,cur:-1,cand:-1,candN:0,
     try{this.src&&this.src.disconnect();this.mute&&this.mute.disconnect();}catch(e){}
     if(this.stream)this.stream.getTracks().forEach(t=>t.stop());this.stream=null;$('#micBtn').classList.remove('on');$('#micBtn').setAttribute('aria-pressed','false');$('#micLvl').style.width='0%';},
   setGain(g){const cfg=this.cfg();const r=g/cfg.gain;cfg.gain=g;if(this.g)this.g.gain.value=g;this.noise*=r;},
-  gate(){return Math.max(this.noise*3,0.0006);},
+  gate(){return Math.max(this.noise*this.P().k,0.0006);},
   tick(){
     if(!this.an)return;const b=this.buf;this.an.getFloatTimeDomainData(b);let s=0;for(let i=0;i<b.length;i++)s+=b[i]*b[i];const rms=Math.sqrt(s/b.length);const now=performance.now();
     if(!this.noise)this.noise=rms;
@@ -664,18 +725,21 @@ const Mic={on:false,stream:null,an:null,buf:null,timer:0,cur:-1,cand:-1,candN:0,
     if(now-this.startAt<350){this.noise=Math.min(this.noise||rms,rms)||rms;}
     const gate=this.gate();this.last.rms=rms;
     $('#micLvl').style.width=Math.max(0,Math.min(100,(20*Math.log10(rms+1e-9)+66)*1.6))+'%';
-    if(rms<gate){if(++this.quiet>3){this.cur=-1;this.cand=-1;this.armed=true;this.valley=rms;}this.last.m=-1;this.last.clar=0;if(this.onTick)this.onTick();return;}
+    if(rms<gate){if(++this.quiet>3){this.cur=-1;this.cand=-1;this.armed=true;this.valley=rms;}this.last.m=-1;this.last.clar=0;
+      if(++this.qn%3===0&&rms>this.noise*0.5){const q=this.yin(b,AudioEng.ctx.sampleRate);for(const k in this.humC)this.humC[k]*=0.97;if(q.f&&q.c>0.55){const hm=Math.round(12*Math.log2(q.f/440)+69);this.humC[hm]=(this.humC[hm]||0)+1;if(this.onHum)this.onHum(hm,q.c);}}
+      if(this.onTick)this.onTick();return;}
     this.quiet=0;
     if(!this.armed){this.peak=Math.max(this.peak,rms);if(rms<this.peak*0.8){this.armed=true;this.valley=rms;}}
     else this.valley=Math.min(this.valley,rms);
     if(this.armed&&rms>this.valley*1.5&&now-this.lastFire>90){this.pending=now;this.armed=false;this.peak=rms;this.cand=-1;this.candN=0;}
     const p=this.yin(b,AudioEng.ctx.sampleRate);let m=-1;
     if(p.f){m=Math.round(12*Math.log2(p.f/440)+69);if(m<LOW-12||m>HIGH+12)m=-1;}
+    const PP=this.P();if(m>=0&&(p.c<PP.clar||(m<48&&(p.c<PP.clar+0.06||rms<gate*PP.low))||(this.isHum(m)&&rms<gate*4)))m=-1;
     this.last.m=m;this.last.clar=p.c;if(this.onTick)this.onTick();
     if(m<0){this.candN=0;return;}
     if(m===this.cand)this.candN++;else{this.cand=m;this.candN=1;}
     const fresh=this.pending&&now-this.pending<260;
-    const fire=(this.candN>=2&&fresh)||(this.candN>=3&&m!==this.cur&&now-this.lastFire>150);
+    const fire=(this.candN>=2&&fresh)||(PP.slide&&this.candN>=3&&m!==this.cur&&now-this.lastFire>150)||(!PP.slide&&this.candN>=4&&p.c>0.93&&m!==this.cur&&now-this.lastFire>250&&rms>gate*2);
     if(fire){if((AudioEng.suppress[m%12]||0)>now){this.pending=0;return;}
       this.cur=m;this.lastFire=now;this.pending=0;if(this.armed){this.armed=false;this.peak=rms;}
       const mm=Math.min(HIGH,Math.max(LOW,m));Input.press(mm,'mic');setTimeout(()=>{if(Input.held.has(mm))Input.release(mm,'mic');},170);}
@@ -699,6 +763,8 @@ const MicPanel={raf:0,
       <div class="meterbox" aria-hidden="true"><div class="mfill" id="mFill"></div><div class="mgate" id="mGate" title="Ngưỡng nhận nốt"></div></div>
       <p class="sm" id="mRead" aria-live="polite">Đang chờ micro…</p>
       <label class="field">Độ nhạy <input type="range" id="micGain" min="0" max="100" value="${Math.round(Math.log(cfg.gain)/Math.log(40)*100)}" style="flex:1"> <output id="micGainV">×${cfg.gain.toFixed(1)}</output></label>
+      <div class="controls"><span class="field">Lọc tạp âm</span><div class="seg" role="radiogroup" aria-label="Mức lọc tạp âm">${[['1','Thấp'],['2','Vừa'],['3','Cao']].map(([v,l])=>`<button type="button" data-filt="${v}" aria-pressed="${cfg.filter==+v}">${l}</button>`).join('')}</div></div>
+      <p class="sm muted" style="margin-top:0">Mức <b>Vừa</b> đã lọc được tiếng quạt thông thường. Nếu vẫn nhận nhầm: chọn <b>Cao</b> rồi bấm Tự hiệu chỉnh <b>trong lúc quạt vẫn chạy</b> để app học tiếng ù của quạt. Quan trọng nhất: <b>đừng để quạt thổi thẳng vào máy</b>, gió vào micro gây tiếng ồn lớn nhất. Mức Thấp nhận được cả nốt nối liền của organ nhưng dễ nhận nhầm hơn.</p>
       <div class="controls"><button class="btn primary" type="button" data-mic="cal">Tự hiệu chỉnh (8 giây)</button><span class="sm" id="micCalMsg" aria-live="polite"></span></div>
       <details class="sm"><summary><b>Vẫn nhận kém? Kiểm tra trên máy</b></summary><ul>
         <li><b>Mac:</b> Cài đặt hệ thống → Âm thanh → Đầu vào: chọn đúng micro (micro MacBook, không phải AirPods), kéo <b>Âm lượng đầu vào</b> lên khoảng 3/4.</li>
@@ -714,23 +780,25 @@ const MicPanel={raf:0,
     $('#micGain').addEventListener('input',e=>{const g=Math.max(1,Math.round(Math.pow(40,e.target.value/100)*10)/10);Mic.setGain(g);$('#micGainV').textContent='×'+g.toFixed(1);});
     $('#micGain').addEventListener('change',()=>Store.save());
     dlg.querySelector('[data-mic=cal]').addEventListener('click',()=>this.calibrate());
+    dlg.querySelectorAll('[data-filt]').forEach(bt=>bt.addEventListener('click',()=>{cfg.filter=+bt.dataset.filt;Store.save();dlg.querySelectorAll('[data-filt]').forEach(x=>x.setAttribute('aria-pressed',x===bt));}));
     dlg.addEventListener('close',()=>{cancelAnimationFrame(this.raf);Mic.onTick=null;},{once:true});
     const db=r=>Math.max(0,Math.min(100,(20*Math.log10(r+1e-9)+66)*1.6));
     Mic.onTick=()=>{};const loop=()=>{if(!dlg.open)return;const L=Mic.last;$('#mFill').style.width=db(L.rms)+'%';$('#mGate').style.left=db(Mic.gate())+'%';
-      $('#mRead').innerHTML=L.rms<Mic.gate()?'Đang yên lặng (dưới vạch ngưỡng). Đánh thử một nốt.':L.m>=0?`Nghe thấy: <b>${midiName(L.m)}</b> (${pcName(L.m,'solfege')}) · độ rõ ${Math.round(L.clar*100)}%`:'Có tiếng nhưng chưa rõ cao độ (tiếng ồn hoặc nhiều nốt cùng lúc).';
+      $('#mRead').innerHTML=L.rms<Mic.gate()?'Đang yên lặng (dưới vạch ngưỡng). Đánh thử một nốt.':L.m>=0?`Nghe thấy: <b>${midiName(L.m)}</b> (${pcName(L.m,'solfege')}) · độ rõ ${Math.round(L.clar*100)}%`:(Mic.last.clar>0&&Mic.last.clar<Mic.P().clar?'Có tiếng nhưng không rõ cao độ, app bỏ qua (tạp âm hoặc nhiều nốt cùng lúc).':'Có tiếng nhưng chưa rõ cao độ.');
       this.raf=requestAnimationFrame(loop);};loop();},
   async devices(){try{const list=(await navigator.mediaDevices.enumerateDevices()).filter(d=>d.kind==='audioinput'&&d.deviceId&&d.deviceId!=='default');const sel=$('#micDev');if(!sel)return;
     sel.innerHTML='<option value="">Micro mặc định của máy</option>'+list.map((d,i)=>`<option value="${esc(d.deviceId)}" ${d.deviceId===Mic.cfg().device?'selected':''}>${esc(d.label||'Micro '+(i+1))}</option>`).join('');}catch(e){}},
   async calibrate(){const msg=$('#micCalMsg');const cfg=Mic.cfg();if(!Mic.on&&!(await Mic.start()))return;
     const sample=(ms)=>new Promise(res=>{const v=[];const t0=performance.now();const iv=setInterval(()=>{v.push(Mic.last.rms/cfg.gain);if(performance.now()-t0>ms){clearInterval(iv);res(v);}},25);});
-    msg.textContent='Bước 1/2: giữ yên lặng 2 giây…';const q=await sample(2000);q.sort((a,b)=>a-b);const noise=q[Math.floor(q.length*0.2)]||0.0002;
+    msg.textContent='Bước 1/2: giữ yên lặng 2 giây (cứ để quạt chạy như bình thường)…';const hc={};Mic.onHum=(m)=>{hc[m]=(hc[m]||0)+1;};const q=await sample(2000);Mic.onHum=null;
+    cfg.hum=Object.entries(hc).filter(([,n])=>n>=4).map(([m])=>+m);q.sort((a,b)=>a-b);const noise=q[Math.floor(q.length*0.2)]||0.0002;
     msg.textContent='Bước 2/2: đánh Đô giữa (C4) 4–5 lần, mỗi lần cách nhau 1 giây…';const heardBefore=[];const lis=(m,s)=>{if(s==='mic')heardBefore.push(m);};Input.listeners.add(lis);
     const v=await sample(6000);Input.listeners.delete(lis);v.sort((a,b)=>a-b);const peak=v[Math.floor(v.length*0.95)]||noise;
     const snr=peak/Math.max(noise,1e-6);
     if(snr<3){msg.innerHTML='Tiếng đàn gần bằng tiếng ồn nên chưa hiệu chỉnh được. Đặt máy gần loa đàn hơn, vặn to đàn, rồi thử lại.';return;}
     const g=Math.max(1,Math.min(40,Math.round(0.2/peak*10)/10));Mic.setGain(g);cfg.noise=noise;cfg.cal=true;Mic.noise=noise*g;Store.save();
     const sl=$('#micGain');if(sl){sl.value=Math.round(Math.log(g)/Math.log(40)*100);$('#micGainV').textContent='×'+g.toFixed(1);}
-    msg.innerHTML=`Xong! Độ nhạy ×${g.toFixed(1)}. Tiếng đàn to hơn tiếng ồn ${Math.round(20*Math.log10(snr))} dB${snr<8?' (hơi sát, nên đặt máy gần đàn hơn)':' (tốt)'}. Nhận được ${heardBefore.length} nốt khi bạn đánh.`;}
+    msg.innerHTML=`Xong! Độ nhạy ×${g.toFixed(1)}.${cfg.hum.length?` Đã học tiếng ù nền: ${cfg.hum.map(m=>midiName(m)).join(', ')} (app sẽ bỏ qua).`:''} Tiếng đàn to hơn tiếng ồn ${Math.round(20*Math.log10(snr))} dB${snr<8?' (hơi sát, nên đặt máy gần đàn hơn)':' (tốt)'}. Nhận được ${heardBefore.length} nốt khi bạn đánh.`;}
 };
 /* ===== Mô phỏng bàn tay trên phím ===== */
 const Hand={spec:null,
@@ -873,34 +941,30 @@ const Player={song:null,ev:[],len:0,beat:0,playing:false,mode:'wait',hands:'R',s
     const full=!this.loop&&this.hands===(this.song.hands==='RL'?'RL':this.song.hands);
     const rec=Store.s.songs[id]||(Store.s.songs[id]={best:0,stars:0,plays:0,speed:0});rec.plays++;
     if(full&&sc.pct>rec.best)rec.best=sc.pct;if(full&&stars>rec.stars)rec.stars=stars;if(full&&sc.pct>=85)rec.speed=Math.max(rec.speed||0,Math.round(this.speed*100));
-    Store.xp(5+stars*10);
+    Store.xp(5+stars*10);if(this.song.ex)App.markPlan('hands2');
     let lessonMsg='';
     if(this.lesson&&sc.pct>=this.minScore&&!this.loop){Lessons.complete(this.lesson,sc.pct);lessonMsg=`<p class="okline">Hoàn thành bài học! <button class="btn sm" data-act="nextLesson">Bài tiếp theo</button></p>`;}
     else if(this.lesson)lessonMsg=`<p>Cần ${this.minScore}% để qua bài học. Thử chậm lại (tốc độ 70%) rồi chơi lại.</p>`;
     const advice=sc.pct>=95?(this.speed<1?'Tăng tốc độ thêm 10% ở lần sau.':'Thử chế độ Theo nhịp để chơi liền mạch không dừng.'):sc.pct>=70?'Lặp lại đoạn hay sai (dùng Lặp đoạn), rồi chơi cả bài.':'Tập riêng từng tay, giảm tốc độ còn 60–70%.';
     this.fb=Analyzer.run(this,sc);const gmsg=this.guide?Guide.after(this,sc):'';
     $('#pResult').innerHTML=`<div class="result"><div class="big">${sc.pct}%</div><div><div class="stars" aria-label="${stars} sao">${'★'.repeat(stars)}${'☆'.repeat(3-stars)}</div>${gmsg||`<p>${advice}</p>`}${lessonMsg}</div></div>${Analyzer.html(this.fb)}`;
-    $('#pPlay')&&($('#pPlay').textContent='Chơi lại');setTimeout(()=>{const r=$('#pResult');if(r)r.scrollIntoView({block:'nearest',behavior:App.reduced?'auto':'smooth'});},60);LED.text(String(sc.pct).padStart(3,' '),'điểm');App.markPlan('song');App.renderSongList();
+    $('#pPlay')&&($('#pPlay').textContent='Chơi lại');setTimeout(()=>{const r=$('#pResult');if(r)r.scrollIntoView({block:'nearest',behavior:App.reduced?'auto':'smooth'});},60);LED.text(String(sc.pct).padStart(3,' '),'điểm');if(!this.song.ex)App.markPlan('song');App.renderSongList();
   },
   updateStaff(force){
     if(!Store.s.settings.staff){$('#pStaff').innerHTML='';return;}
-    const s=this.song;const bpb=s.beats;const pk=s.pickup||0;const b=Math.max(0,this.beat);
-    let barStart=b<pk?0:pk+Math.floor((b-pk+1e-6)/bpb)*bpb;if(this.mode==='wait'&&this.groups[this.gi]){const t=this.groups[this.gi].t;barStart=t<pk?0:pk+Math.floor((t-pk+1e-6)/bpb)*bpb;}
-    const span=bpb<=1.5?bpb*4:bpb*2;const from=Math.floor((barStart-(pk&&barStart===0?0:0))/span*1e6)/1e6;const win=barStart;
+    const s=this.song;let t=Math.max(0,this.beat);if(this.mode==='wait'&&this.groups[this.gi])t=this.groups[this.gi].t;
+    const bi=barOfT(s,t);const win=barStartOf(s,bi);let k=2;if(barStartOf(s,bi+1)-win<=1.5)k=4;const to=Math.max(win+0.5,barStartOf(s,bi+k));
     const key=win+'|'+this.gi;if(!force&&key===this._sk)return;this._sk=key;
-    const bars=[];for(let x=pk||bpb;x<this.len+bpb;x+=bpb)bars.push(x);
-    const hl=new Set();const g=this.groups[this.gi];if(g&&this.mode==='wait')g.need.forEach(e=>hl.add(this.ev[e.i]===e?e:e));
-    const done=new Set(this.ev.filter(e=>e.hit));
-    const hasL=this.ev.some(e=>e.h==='L'),hasR=this.ev.some(e=>e.h==='R');
-    $('#pStaff').innerHTML=staffSVG({notes:this.ev,from:win,to:win+span,bars,width:720,clefs:hasL&&hasR?['t','b']:hasL?['b']:['t'],hl,done,flats:s.flats,label:'Bản nhạc đoạn đang tập'});
+    const bars=barT(s);const hl=new Set();const g=this.groups[this.gi];if(g&&this.mode==='wait')g.need.forEach(e=>hl.add(e));
+    const done=new Set(this.ev.filter(e=>e.hit));const hasL=this.ev.some(e=>e.h==='L'),hasR=this.ev.some(e=>e.h==='R');
+    $('#pStaff').innerHTML=staffSVG({notes:this.ev,from:win,to,bars,width:720,clefs:hasL&&hasR?['t','b']:hasL?['b']:['t'],hl,done,flats:s.flats,label:'Bản nhạc đoạn đang tập'});
   },
   draw(){
     if(!Roll.visible||!this.song)return;const cv=$('#roll');const ctx=cv.getContext('2d');const dpr=Roll.dpr||1;const H=Roll.h||200;
     ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,KB.width,H);
     const look=Math.max(3,Math.min(8,4*this.speed*(this.song.tempo/90)));const ppb=H/look;const b=this.beat;
-    const pk=this.song.pickup||0,bpb=this.song.beats;
     ctx.strokeStyle='rgba(255,255,255,.08)';ctx.lineWidth=1;
-    for(let x=pk;x<b+look;x+=bpb){if(x<b-0.5)continue;const y=H-(x-b)*ppb;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(KB.width,y);ctx.stroke();}
+    for(const x of barT(this.song)){if(x<b-0.5||x>b+look)continue;const y=H-(x-b)*ppb;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(KB.width,y);ctx.stroke();}
     for(let m=LOW;m<=HIGH;m++)if(m%12===0){ctx.fillStyle='rgba(255,255,255,.035)';ctx.fillRect(KB.x(m)-KB.ww/2,0,1,H);}
     const css=getComputedStyle(document.documentElement);const cR=css.getPropertyValue('--krh').trim()||'#3B82D6',cL=css.getPropertyValue('--klh').trim()||'#E58A1F';
     ctx.font='700 11px "Be Vietnam Pro",system-ui,sans-serif';ctx.textAlign='center';
@@ -917,10 +981,10 @@ const Player={song:null,ev:[],len:0,beat:0,playing:false,mode:'wait',hands:'R',s
   setRange(from,to,repeat){this.loop={from,to};this.loopRepeat=!!repeat;this.stop();},
   syncControls(){$$('#playerPanel [data-mode]').forEach(x=>x.setAttribute('aria-pressed',x.dataset.mode===this.mode));$$('#playerPanel [data-hands]').forEach(x=>x.setAttribute('aria-pressed',x.dataset.hands===this.hands));
     const sp=$('#pSpeed');if(sp){sp.value=Math.round(this.speed*100);$('#pSpeedV').textContent=Math.round(this.speed*100)+'%';}this.updateScore();},
-  setLoop(fromBar,toBar){const s=this.song,pk=s.pickup||0,bpb=s.beats;if(!fromBar){this.loop=null;}else{
-    const st=k=>k<=0?0:pk+(k-1)*bpb;this.loop={from:st(fromBar),to:Math.min(this.len,st(toBar+1))};}this.loopRepeat=!!this.loop;this.stop();},
+  setLoop(fromBar,toBar){const s=this.song;if(!fromBar){this.loop=null;}else{
+    this.loop={from:barStartOf(s,fromBar),to:Math.min(this.len,barStartOf(s,toBar+1))};}this.loopRepeat=!!this.loop;this.stop();},
   renderUI(){
-    const s=this.song;const bars=Math.ceil((this.len-(s.pickup||0))/s.beats-1e-6);
+    const s=this.song;const bars=Math.max(1,barCount(s));
     const hasR=s.hands.includes('R')||(s.compiled||compileSong(s)).ev.some(e=>e.h==='R'),hasL=(s.compiled||compileSong(s)).ev.some(e=>e.h==='L');
     const handOpts=[hasR&&['R','Tay phải'],hasL&&['L','Tay trái'],hasR&&hasL&&['RL','Hai tay']].filter(Boolean);
     $('#songsList').hidden=true;const p=$('#playerPanel');p.hidden=false;
@@ -956,18 +1020,19 @@ const Player={song:null,ev:[],len:0,beat:0,playing:false,mode:'wait',hands:'R',s
 
 /* ===== Danh sách bài + bài tự nhập ===== */
 const Songs={
-  all(){return SONGS.concat(Store.s.custom.map(c=>({...c,custom:true,hands:c.L&&c.L.trim()?'RL':(c.R&&c.R.trim()?'R':'L')})));},
+  all(){const key=Store.s.custom.length+'|'+Store.s.updatedAt;if(!this._c||this._cv!==key){this._cv=key;this._c=Store.s.custom.map(c=>({...c,custom:true,hands:c.evs?([...new Set(c.evs.map(e=>e[3]))].sort().reverse().join('')):(c.L&&c.L.trim()?'RL':(c.R&&c.R.trim()?'R':'L'))}));}return SONGS.concat(this._c);},
   byId(id){return this.all().find(s=>s.id===id);},
   renderList(){
-    const el=$('#songsList');const rows=SONGS.map(s=>this.row(s)).join('');
-    el.innerHTML=`<div class="callout"><p><b>Muốn tập nhạc Ghibli?</b> Giai điệu gốc của các bài này vẫn còn bản quyền nên app không chép sẵn. Có hai cách: nhập nốt từ sheet bạn mua (bản chính thức hoặc Musicnotes) vào mục <i>Bài của tôi</i>, hoặc tự nghe và ghi lại bằng tab <i>Phá băng</i>. Trong lúc đó, <i>Gymnopédie</i> và <i>Chiều gió đồng</i> luyện đúng những kỹ thuật các bản phối piano nhạc phim hay dùng.</p></div>
+    const el=$('#songsList');const rows=SONGS.filter(s=>!s.ex).map(s=>this.row(s)).join('');
+    el.innerHTML=`${Wish.html()}${MidiBox.html()}<div class="callout"><p><b>Muốn tập nhạc Ghibli?</b> Giai điệu gốc của các bài này vẫn còn bản quyền nên app không chép sẵn. Có hai cách: nhập nốt từ sheet bạn mua (bản chính thức hoặc Musicnotes) vào mục <i>Bài của tôi</i>, hoặc tự nghe và ghi lại bằng tab <i>Phá băng</i>. Trong lúc đó, <i>Gymnopédie</i> và <i>Chiều gió đồng</i> luyện đúng những kỹ thuật các bản phối piano nhạc phim hay dùng.</p></div>
     <h3>Thư viện</h3><ul class="songlist">${rows}</ul>
-    <div class="row-between"><h3>Bài của tôi</h3><button class="btn" data-act="newSong">Thêm bài</button></div>
+    <h3>Luyện ngón hai tay</h3><p class="muted sm">8 bài ngắn đưa bạn từ một tay lên hai tay. Làm theo thứ tự, mỗi ngày một bài, học từng bước.</p><ul class="songlist">${SONGS.filter(s=>s.ex).sort((a,b)=>a.ex-b.ex).map(s=>this.row(s)).join('')}</ul>
+    <div class="row-between"><h3>Bài của tôi</h3><div class="controls" style="margin:0"><button class="btn primary" data-act="stepEd">Chép bài từ video</button><button class="btn ghost" data-act="newSong">Nhập bằng chữ</button></div></div>
     ${Store.s.custom.length?`<ul class="songlist">${Store.s.custom.map(c=>this.row({...c,custom:true})).join('')}</ul>`:`<p class="muted">Chưa có bài nào. Nhập nốt từ sheet nhạc, hoặc ghi giai điệu bạn tự nghe được ở tab Phá băng.</p>`}
     <div id="editor"></div>`;
   },
   row(s){const r=Store.s.songs[s.id]||{};const lv=s.level?`<span class="lv" title="Độ khó">${'●'.repeat(s.level)}${'○'.repeat(5-s.level)}</span>`:'';
-    return `<li><button class="songrow" data-song="${esc(s.id)}"><span class="st">${esc(s.title)}</span><span class="sm muted">${esc(s.by||'Bài tự nhập')}${(s.tags||[]).map(t=>` · ${esc(t)}`).join('')}</span>${lv}<span class="best">${r.plays?`${'★'.repeat(r.stars||0)}${'☆'.repeat(3-(r.stars||0))} ${r.best||0}%`:''}</span></button>${s.custom?`<button class="btn sm ghost" data-edit="${esc(s.id)}">Sửa</button>`:`<button class="btn sm ghost" data-act="guide" data-song="${esc(s.id)}" title="Học từng bước">Từng bước${(()=>{const n=Guide.done(s.id).length;return n?` ${n}/${Guide.steps(s).length}`:'';})()}</button>`}</li>`;},
+    return `<li><button class="songrow" data-song="${esc(s.id)}"><span class="st">${esc(s.title)}</span><span class="sm muted">${esc(s.by||'Bài tự nhập')}${(s.tags||[]).map(t=>` · ${esc(t)}`).join('')}</span>${lv}<span class="best">${r.plays?`${'★'.repeat(r.stars||0)}${'☆'.repeat(3-(r.stars||0))} ${r.best||0}%`:''}</span></button>${s.custom?`<button class="btn sm ghost" data-act="guide" data-song="${esc(s.id)}">Từng bước</button>${s.evs?`<button class="btn sm ghost danger" data-act="eDel" data-id="${esc(s.id)}">Xóa</button>`:`<button class="btn sm ghost" data-act="stepEd" data-id="${esc(s.id)}">Sửa</button>`}`:`<button class="btn sm ghost" data-act="guide" data-song="${esc(s.id)}" title="Học từng bước">Từng bước${(()=>{const n=Guide.done(s.id).length;return n?` ${n}/${Guide.steps(s).length}`:'';})()}</button>`}</li>`;},
   editor(id){
     const c=id?Store.s.custom.find(x=>x.id===id):{title:'',tempo:80,beats:4,R:'',L:''};if(!c)return;
     $('#editor').innerHTML=`<div class="panel"><h3>${id?'Sửa bài':'Thêm bài mới'}</h3>
@@ -1077,10 +1142,14 @@ const LESSONS=[
   task:{type:'findQuiz',pool:[0,1,2,3,4,5,6,7,8,9,10,11],rounds:12,pass:0.75}},
  {id:'s-jingle',stage:3,title:'Jingle Bells (vừa đánh vừa đọc khuông)',body:`<p>Bật <b>Bản nhạc</b> trong phòng tập. Thử nhìn khuông nhạc thay vì nhìn nốt rơi: đây là bước chuyển sang đọc sheet thật.</p>`,task:{type:'song',song:'jingle',min:75}},
  {id:'s-frere',stage:3,title:'Frère Jacques (Kìa con bướm vàng)',body:`<p>Bài có nốt móc đơn (nửa phách). Đếm “1-và-2-và” để giữ nhịp.</p>`,task:{type:'song',song:'frere',min:75}},
+ {id:'x1',stage:4,title:'Hai tay đầu tiên: soi gương',body:`<p>Từ một tay lên hai tay là bước khó nhất của người mới. Bí quyết: bắt đầu bằng kiểu hai tay <b>dễ nhất cho não</b>, là hai tay dùng <b>cùng số ngón</b> nhưng đi ngược chiều, như soi gương.</p><ul><li>Tập tay phải riêng, rồi tay trái riêng, rồi mới ghép ở tốc độ 60%.</li><li>Đếm to thành tiếng. Khi ghép, nhìn tay trái.</li><li>Sai nhiều thì chậm lại, đừng nhanh lên.</li></ul><p>Bấm <b>Học từng bước</b>: app tự đưa bạn qua từng bước.</p>`,task:{type:'song',song:'x-mirror',min:75}},
+ {id:'x2',stage:4,title:'Hai tay song song',body:`<p>Giờ hai tay đi <b>cùng hướng</b> nhưng dùng <b>khác số ngón</b>: tay phải 1→5 trong khi tay trái 5→1. Não phải điều khiển hai bàn tay “lệch nhau”, nên chậm hơn bài trước là bình thường.</p>`,task:{type:'song',song:'x-parallel',min:75}},
+ {id:'x3',stage:4,title:'Một tay giữ, một tay đi',body:`<p>Bước quan trọng nhất trước khi chơi bài hai tay: <b>tay trái bấm rồi giữ</b>, tay phải tiếp tục đi. Đây chính là cách đệm của hầu hết bài hát.</p><p>Xong bài này, thử thêm <i>Tay phải giữ, tay trái đi</i> và <i>Hỏi – đáp</i> ở mục Luyện ngón hai tay.</p>`,task:{type:'song',song:'x-holdl',min:75}},
  {id:'chords1',stage:4,title:'Hợp âm ba nốt: C, F, G',hand:{hand:'L',map:{5:48,3:52,1:55}},
   body:`<p>Hợp âm trưởng gồm 3 nốt: nốt gốc, nốt cách 2 phím trắng, rồi thêm 2 phím trắng nữa. Ví dụ <b>C = Đô – Mi – Sol</b>.</p>
   <p>C, F, G là ba hợp âm chính của giọng Đô trưởng. Để tay trái ít di chuyển, ta dùng <b>thế đảo</b>: F = Đô – Fa – La, G = Si – Rê – Sol. Bấm đủ 3 nốt cùng lúc (trên màn hình có 1,5 giây để bấm lần lượt).</p>`,
   task:{type:'chords',hand:'L',seq:[{name:'C',notes:[48,52,55],f:[5,3,1]},{name:'F',notes:[48,53,57],f:[5,2,1]},{name:'C',notes:[48,52,55],f:[5,3,1]},{name:'G',notes:[47,50,55],f:[5,3,1]},{name:'C',notes:[48,52,55],f:[5,3,1]}]}},
+ {id:'x6',stage:4,title:'Hợp âm tay trái, giai điệu tay phải',body:`<p>Ghép điều vừa học: tay trái bấm hợp âm C – F – C – G – C ở phách 1 và giữ, tay phải hát giai điệu 3 nốt. Đây là bản thu nhỏ của mọi bài đệm hát.</p>`,task:{type:'song',song:'x-chord',min:75}},
  {id:'s-ode2',stage:4,title:'Ode to Joy – hai tay',body:`<p>Quy trình chuẩn cho mọi bài hai tay: tập <b>tay phải</b> → tập <b>tay trái</b> → ghép <b>hai tay ở tốc độ 60%</b> → tăng dần. Trong phòng tập, chọn Tay phải / Tay trái / Hai tay.</p>`,task:{type:'song',song:'ode2',min:70,hands:'RL'}},
  {id:'scale',stage:4,title:'Âm giai Đô trưởng và luồn ngón cái',hand:{hand:'R',map:{1:60,2:62,3:64}},
   body:`<p>Đi lên: Đô (1), Rê (2), Mi (3), rồi <b>luồn ngón cái xuống dưới</b> để đánh Fa (1), tiếp Sol (2), La (3), Si (4), Đô (5).</p><p>Đi xuống thì ngược lại: sau Fa (1), <b>ngón 3 vắt qua ngón cái</b> để đánh Mi. Cổ tay giữ ngang, chỉ ngón cái di chuyển.</p>`,
@@ -1113,6 +1182,7 @@ const LESSONS=[
   body:`<p>Hầu hết bài hát chỉ dùng vài vòng hợp âm quen thuộc. Pop hay dùng <b>I–V–vi–IV</b>. Nhạc phim, J-pop và anime rất hay dùng <b>IV–V–iii–vi</b> (gọi là vòng “Royal Road”): ở giọng Đô là F – G – Em – Am.</p>
   <p>Thêm nốt 9 vào hợp âm (<b>add9</b>, ví dụ F thêm Sol) tạo cảm giác trong trẻo, hoài niệm, rất hợp chất nhạc phim hoạt hình. Thử ở tab <i>Phá băng</i>.</p>`,
   task:{type:'chords',hand:'R',seq:[{name:'F',notes:[60,65,69],f:[1,3,5]},{name:'G',notes:[59,62,67],f:[1,2,5]},{name:'Em',notes:[59,64,67],f:[1,3,5]},{name:'Am',notes:[60,64,69],f:[1,2,5]}]}},
+ {id:'x7',stage:6,title:'Tay trái rải 1–5–8',body:`<p>Kỹ thuật đệm gặp rất nhiều trong các bản piano nhạc phim: tay trái rải Đô – Sol – Đô cao – Sol đều đặn, tay phải giữ nốt dài. Tay trái phải tự chạy, không cần nhìn.</p>`,task:{type:'song',song:'x-arp',min:75}},
  {id:'s-etude',stage:6,title:'Chiều gió đồng (phong cách nhạc phim)',body:`<p>Bài luyện của app: tay trái rải 1–5–8 trên vòng IV–V–iii–vi, tay phải hát một giai điệu chậm.</p>`,task:{type:'song',song:'etude',min:70,hands:'RL'}},
  {id:'s-gymno',stage:6,title:'Gymnopédie No.1',body:`<p>Tay trái nhảy từ nốt trầm lên hợp âm. Chơi chậm, nhẹ, để từng hợp âm ngân trọn.</p>`,task:{type:'song',song:'gymno',min:70,hands:'RL'}},
  {id:'firstear',stage:6,title:'Phá băng bài đầu tiên của bạn',
@@ -1121,6 +1191,7 @@ const LESSONS=[
  {id:'s-birthday',stage:7,title:'Happy Birthday',body:`<p>Nhịp 3/4 với ô lấy đà. Câu 3 có bước nhảy quãng tám: nhìn phím đích trước khi nhảy.</p>`,task:{type:'song',song:'birthday',min:75}},
  {id:'s-minuet',stage:7,title:'Minuet in G',body:`<p>Bài kinh điển cho người mới. Tay phải có nhiều nốt móc đơn; giữ chúng đều như hạt chuỗi.</p>`,task:{type:'song',song:'minuet',min:70,hands:'RL'}},
  {id:'s-mozart',stage:7,title:'Eine kleine Nachtmusik (Mozart)',body:`<p>Tiếng gọi Sol–Rê nổi tiếng xen dấu lặng ngắn. Đếm “một – và” để nghỉ đúng chỗ.</p>`,task:{type:'song',song:'mozart',min:70}},
+ {id:'s-moon',stage:7,title:'Moonlight Sonata (mở đầu)',body:`<p>Tay phải rải chùm ba nốt đều đều, tay trái đi bass chậm. Không nhanh, chỉ cần đều và nhẹ.</p>`,task:{type:'song',song:'moon',min:70}},
  {id:'s-elise',stage:7,title:'Für Elise (mở đầu)',body:`<p>Hai tay nối tiếp nhau. Tập chậm ở 50% cho tới khi luồng chuyển tay mượt.</p>`,task:{type:'song',song:'elise',min:70,hands:'RL'}},
  {id:'s-prelude',stage:7,title:'Prelude in C (Bach)',body:`<p>Mỗi ô nhịp là một hợp âm rải. Bấm thử từng hợp âm dạng khối trước để tay nhớ hình dáng.</p>`,task:{type:'song',song:'prelude',min:70,hands:'RL'}},
 ];
@@ -1290,17 +1361,18 @@ const GUIDE_INFO={
  grace:{prep:['organ','chords1'],chords:'G – G – C – G – G – Em – D',intro:`<p>Bài hát nhà thờ cho organ. Tay trái <b>giữ hợp âm liền tiếng</b> và đổi sang hợp âm kế tiếp mà không có khoảng lặng. Ô đầu là ô lấy đà (chỉ có 1 nốt Rê).</p>`,tips:{}},
  green:{prep:['black'],chords:'Am – G – Am – E …',intro:`<p>Giọng La thứ, nhịp 3/4, buồn và đẹp. Phím đen: Sol♯ ở cuối các câu (và Fa♯ một lần). Bài không ghi số ngón: chọn sao cho ít dời tay nhất.</p>`,tips:{}},
  mozart:{prep:['rhpos','black'],chords:'G – G – D – D',intro:`<p>Mở đầu bản nhạc đêm nổi tiếng của Mozart: những tiếng gọi Sol – Rê khỏe khoắn xen <b>dấu lặng nửa phách</b>. Đếm “một – và” để nghỉ đúng chỗ. Phím đen: Fa♯.</p>`,tips:{}},
+ moon:{prep:['lhpos','rhpos','black'],chords:'C♯m – C♯m/B – A – D/A – G♯7 – C♯m',intro:`<p>Mở đầu chương 1 “Ánh trăng” của Beethoven: tay phải rải <b>chùm ba nốt</b> đều đều suốt bài (mỗi phách 3 nốt), tay trái đi bass chậm Đô♯ – Si – La – Fa♯ – Sol♯. Không có giai điệu nhanh, chỉ cần đều và nhẹ: rất hợp để thư giãn.</p><p>Phím đen: Đô♯, Sol♯, Fa♯, Rê♯. Ngón cái tay phải đặt trên Sol♯ (phím đen) là bình thường trong bài này.</p>`,tips:{R1:'Ngón 1 trên Sol♯, ngón 2 Đô♯, ngón 4 Mi. Giữ nguyên hình bàn tay, chỉ lặp lại đều như con lắc: một-và-a, hai-và-a.'}},
  birthday:{prep:['rhpos'],chords:'C – G – G – C – C – F – C G – C',intro:`<p>Nhịp 3/4 với ô lấy đà (2 nốt Sol ngắn). Câu 3 có bước nhảy quãng tám từ Sol lên Sol cao.</p>`,tips:{}},
 };
 
 /* ===== Học từng bước ===== */
 const Guide={
   steps(song){if(song._steps)return song._steps;const c=song.compiled||compileSong(song);song.compiled=c;const bpb=song.beats,pk=song.pickup||0;
-    const nb=Math.max(1,Math.ceil((c.len-pk)/bpb-1e-6));const hasR=c.ev.some(e=>e.h==='R'),hasL=c.ev.some(e=>e.h==='L');const all=hasR&&hasL?'RL':hasR?'R':'L';
-    const ph=bpb<=1.5?4:(nb<=8?2:4);const st=k=>k<=0?0:pk+(k-1)*bpb;const S=[];
+    const nb=Math.max(1,barCount(song));const hasR=c.ev.some(e=>e.h==='R'),hasL=c.ev.some(e=>e.h==='L');const all=hasR&&hasL?'RL':hasR?'R':'L';
+    const avgBar=(c.len-pk)/Math.max(1,nb);const ph=song.ex?nb:(avgBar<=1.5?4:(nb<=8?2:4));const st=k=>barStartOf(song,k);const S=[];
     S.push({key:'listen',kind:'listen',title:'Nghe và nhìn trước',mode:'demo',hands:all,speed:1,min:0});
     const hand=(h,name)=>{for(let a=1;a<=nb;a+=ph){const b=Math.min(nb,a+ph-1);const k=h+(a===1&&pk?0:a);
-        S.push({key:k,kind:'phrase',title:`${name}: ô ${a===1&&pk?'lấy đà–'+b:a+'–'+b}`,mode:'wait',hands:h,speed:0.7,from:a===1&&pk?0:st(a),to:st(b+1),min:80});}
+        S.push({key:k,kind:'phrase',title:`${name}: ô ${a===1&&pk?'lấy đà–'+b:(a===b?a:a+'–'+b)}`,mode:'wait',hands:h,speed:0.7,from:a===1&&pk?0:st(a),to:st(b+1),min:80});}
       if(nb>ph)S.push({key:h+'all',kind:'handall',title:`${name}: cả bài`,mode:'wait',hands:h,speed:0.8,min:80});};
     if(hasR)hand('R','Tay phải');if(hasL)hand('L','Tay trái');
     if(hasR&&hasL){const half=Math.min(nb,ph*2);if(half<nb)S.push({key:'HT1',kind:'ht',title:`Ghép hai tay: ô 1–${half}`,mode:'wait',hands:'RL',speed:0.6,from:0,to:st(half+1),min:75});
@@ -1352,7 +1424,7 @@ const Guide={
 
 /* ===== Trợ lý đọc kết quả tập ===== */
 const Analyzer={
-  run(P,sc){const s=P.song,bpb=s.beats,pk=s.pickup||0;const barOf=b=>b<pk-1e-6?0:1+Math.floor((b-pk+1e-6)/bpb);
+  run(P,sc){const s=P.song;const barOf=t=>barOfT(s,t);
     const err={},byHand={R:0,L:0};const add=(t,h)=>{const k=barOf(t);err[k]=(err[k]||0)+1;if(h)byHand[h]++;};
     for(const w of P.log.wrong){const e=w.exp&&w.exp.length?w.exp.reduce((p,c)=>Math.abs(c.m-w.m)<Math.abs(p.m-w.m)?c:p):null;w.near=e;add(e?e.t:w.b,e&&e.h);}
     for(const g of P.groups)for(const e of g.need)if(e.miss)add(e.t,e.h);
@@ -1386,7 +1458,7 @@ const has=(q,k)=>q.includes(' '+k+' ');
 const L_=(id,label)=>`data-lesson="${id}"|${label}`,SK=(id,label)=>`data-skill="${id}"|${label}`,GO=(v,label)=>`data-go="${v}"|${label}`;
 const KBASE=[
  {k:['tu the','ngoi','ghe','do cao','co tay','vai','ngon cong','dang tay'],a:'Ngồi ở nửa trước ghế, hai chân đặt phẳng. Cẳng tay ngang hoặc cao hơn mặt phím một chút; PSR-F52 đặt trên bàn thường hơi cao nên có thể kê thêm gối. Ngón cong như úp lên quả cam, chạm phím bằng đầu ngón; cổ tay thẳng hàng với mu bàn tay, vai thả lỏng.',act:[L_('posture','Bài: Ngồi đúng và dáng tay')]},
- {k:['moi','dau','nhuc','te','cang','moi tay','dau tay'],a:'Dừng lại, thả lỏng vai, lắc nhẹ hai tay. Thường là do gồng ngón hoặc cổ tay gập. Chỉ bấm đủ lực cho phím kêu, tập từng đợt 20–25 phút rồi nghỉ. Đau kéo dài hoặc tê thì nghỉ hẳn và đi khám.',act:[L_('posture','Xem lại tư thế')]},
+ {k:['moi tay','bi moi','moi co tay','moi vai','moi ngon','dau','nhuc','te tay','cang','dau tay','dau co tay'],a:'Dừng lại, thả lỏng vai, lắc nhẹ hai tay. Thường là do gồng ngón hoặc cổ tay gập. Chỉ bấm đủ lực cho phím kêu, tập từng đợt 20–25 phút rồi nghỉ. Đau kéo dài hoặc tê thì nghỉ hẳn và đi khám.',act:[L_('posture','Xem lại tư thế')]},
  {k:['ngon 4','ngon 5','ngon ut','ngon ap ut','sap','gay ngon','cong nguoc','ngon yeu'],a:'Ngón 4 và 5 sập là chuyện rất phổ biến ở người mới. Tập Khởi động 5 ngón thật chậm, nhìn vào đầu ngón 4–5, giữ khớp đầu ngón hơi cong và đánh nhẹ. Sau 2–3 tuần ngón sẽ khỏe lên.',act:[SK('warm','Khởi động 5 ngón')]},
  {k:['so ngon','danh so ngon','ngon so','ngon cai','ngon tro'],a:'Hai tay đánh số giống nhau: ngón cái là 1, trỏ 2, giữa 3, áp út 4, út 5. Con số trên nốt rơi cho biết dùng ngón nào; tập đúng số ngón từ đầu giúp sau này đánh nhanh mà không rối.',act:[L_('fingers','Bài: Số ngón tay')]},
  {k:['do giua','c4','middle c','tim do','phim do','tim phim do'],a:'Đô giữa (C4) là phím Đô thứ 3 tính từ bên trái trên đàn 61 phím; trong app nó có chấm đỏ nhỏ. Phím Đô luôn nằm ngay bên trái nhóm 2 phím đen.',act:[L_('midc','Bài: Đô giữa và quãng tám'),L_('findc','Bài: Tìm Đô')]},
@@ -1408,6 +1480,9 @@ const KBASE=[
  {k:['style','dem tu dong','dieu','tieng trong','auto','dem hat'],a:'Nút STYLE cho đàn tự chơi trống và bè đệm theo hợp âm tay trái. Chọn điệu, bắt đầu phát, tay trái bấm hợp âm ở vùng phím bên trái, tay phải đánh giai điệu, và chỉnh TEMPO chậm khi mới tập. Cách bật tắt chi tiết khác nhau theo đời máy, nên xem mục Style trong sách hướng dẫn.',act:[L_('styles','Bài: Đệm tự động')]},
  {k:['pedal','sustain','ngan','vang tieng','giu tieng'],a:'Pedal sustain giữ cho tiếng piano ngân sau khi buông phím. Nếu đàn có cổng SUSTAIN thì cắm pedal vào (xem sách hướng dẫn để chắc đàn có hay không). Người mới nên tập không pedal trước để tay tự nối nốt; organ thì không dùng pedal này.'},
  {k:['hai tay','phoi hop','ghep tay','ghep hai tay','tay trai','doc lap'],a:'Quy trình chuẩn: tay phải riêng → tay trái riêng → ghép hai tay ở 60% → tăng dần. Khi ghép, nhìn tay yếu hơn. Chế độ Học từng bước làm đúng quy trình này cho từng bài.',act:[GO('songs','Mở danh sách bài')]},
+ {k:['luyen ngon','luyen ngon hai tay','hai tay kho','khong danh duoc hai tay','mot tay','1 tay','2 tay','danh 2 tay','danh hai tay','choi 2 tay','choi hai tay','hai tay cung luc','danh duoc mot tay','danh duoc 1 tay','doc lap hai tay','hanon'],a:'Từ một tay lên hai tay là bước khó nhất của người mới, ai cũng qua được nếu đi đúng thứ tự. App có 8 bài <b>Luyện ngón hai tay</b>: bắt đầu bằng <b>Hai tay soi gương</b> (hai tay cùng số ngón, đi ngược chiều), rồi song song, rồi một tay giữ một tay đi, hỏi – đáp, hợp âm + giai điệu, rải 1–5–8, và Hanon. Mỗi ngày 5 phút, mỗi bài học từng bước: tay phải, tay trái, ghép chậm.',act:['data-act="guide" data-song="x-mirror"|Bắt đầu: Hai tay soi gương',GO('skills','Xem 8 bài luyện ngón')]},
+ {k:['youtube','video','link','chep bai','chep tu video','convert','chuyen bai','tutorial','synthesia','hoc theo video','nghe ytb','nghe youtube','tu nghe','tu soan'],a:'App không tự nghe video để soạn bài được: micro chỉ nghe một nốt mỗi lúc, còn bản thu piano hai tay có hợp âm và pedal chồng lên nhau. Với bài còn bản quyền thì cũng không thể chép nốt hộ. Nhưng bạn tự chép được bằng công cụ <b>Chép bài từ video</b> (tab Bài hát → Bài của tôi): mở video ở cửa sổ khác, chỉnh 0,5×, chọn tay, độ dài, số ngón rồi bấm phím. Lưu xong bấm <b>Học từng bước</b> là app dạy lại bài của bạn từ tay phải, tay trái đến ghép hai tay. Bài cổ điển đã hết bản quyền thì có thể nhờ soạn sẵn vào app.',act:['data-act="stepEd"|Mở Chép bài từ video']},
+ {k:['midi','file midi','nhap midi','imslp','mutopia','ban nhac mien phi','sheet mien phi','bai mo uoc','danh sach bai'],a:'Tab Bài hát → <b>Hộp MIDI</b>: bấm <b>Chọn file .mid</b> (hoặc <b>Dán từ tin nhắn</b> nếu bạn gửi file qua Teams). Rồi bấm <b>Lấy đoạn để học</b>: chọn đoạn 8–16 ô và mức độ. Mức <b>Dễ</b> chỉ giữ giai điệu tay phải và nốt bass tay trái, có số ngón gợi ý: hợp với người mới. App tự tách hai tay và dạy theo Học từng bước. Với bài cổ điển đã hết bản quyền, nút <b>Tìm MIDI</b> trong Bài mơ ước giúp tìm file miễn phí.',act:[GO('songs','Mở Bài mơ ước')]},
  {k:['nhay','nhay xa','doi tay','di chuyen tay','dich tay'],a:'Khi phải nhảy xa: nhìn phím đích trước, di chuyển cả bàn tay (không vươn từng ngón), và đặt tay sẵn ngay khi nốt trước vừa buông. Tập riêng cú nhảy đó vài lần ở tốc độ chậm.'},
  {k:['luyen tai','cam am','nghe quang','quang','nghe not','tai nghe nhac'],a:'Luyện tai mỗi ngày 5 phút: nghe quãng, nghe trưởng/thứ, nhại giai điệu. App tự lên cấp khi bạn nghe tốt. Đây là nền tảng để tự phá băng bài.',act:[SK('interval','Nghe quãng'),SK('echo','Nhại giai điệu')]},
  {k:['pha bang','theo tai','tu danh','tu choi','do not','mo not','tim not','ghi giai dieu'],a:'Phá băng một bài: (1) chọn câu bạn hát được, (2) tìm nốt đầu bằng cách hát rồi dò phím, (3) với mỗi nốt tiếp, đoán lên hay xuống, (4) ghi lại ở Ghi giai điệu, (5) bấm Gợi ý hợp âm, (6) lưu thành bài để tập. Nghe bản gốc ở tốc độ 0,75× sẽ dễ hơn.',act:[GO('explore','Mở Phá băng'),L_('firstear','Bài: Phá băng bài đầu tiên')]},
@@ -1426,14 +1501,14 @@ const KBASE=[
 const SONG_ALIAS={canon:['canon','pachelbel','canon in d'],elise:['fur elise','elise','furelise','thu gui elise'],prelude:['prelude','bach','prelude in c'],gymno:['gymnopedie','satie'],minuet:['minuet','menuet','petzold'],
   ode2:['ode to joy hai tay'],ode:['ode to joy','ode','khuc hoan ca','niem vui','beethoven 9'],grace:['amazing grace','grace'],green:['greensleeves','green sleeves'],birthday:['happy birthday','sinh nhat','chuc mung sinh nhat'],
   jingle:['jingle bells','jingle','giang sinh'],twinkle:['twinkle','ngoi sao','little star','sao lap lanh'],mary:['mary','little lamb','con cuu'],frere:['frere jacques','jacques','buom vang','kia con buom vang'],
-  etude:['chieu gio dong'],home:['going home','dvorak','the gioi moi','new world','largo'],mozart:['eine kleine','nachtmusik','mozart','khuc nhac dem']};
-const COPYR=['ghibli','totoro','chihiro','spirited away','howl','hisaishi','merry go round','one summer','kiki','ponyo','mononoke','laputa','summer','sen va chihiro'];
+  etude:['chieu gio dong'],moon:['moonlight','anh trang','sonata anh trang','moonlight sonata'],home:['going home','dvorak','the gioi moi','new world','largo'],mozart:['eine kleine','nachtmusik','mozart','khuc nhac dem']};
+const COPYR=['ghibli','totoro','chihiro','spirited away','howl','hisaishi','merry go round','merry','one summer','kiki','ponyo','mononoke','laputa','sen va chihiro','lau dai di dong'];
 const Tutor={msgs:[],
   answer(raw){const q=norm(raw);const r=(html,acts)=>({html,acts:acts||[]});
     if(q.trim().length<2)return r('Bạn gõ câu hỏi về đàn nhé, ví dụ “dạy tôi Canon in D”.');
     if(/^ (chao|xin chao|hello|hi|alo|hey)( ban| tro ly| thay)? $/.test(q))return r('Chào bạn! Mình là trợ lý offline của Phím Nhà. Hỏi mình về kỹ thuật, nhạc lý, cách tập, hoặc gõ tên một bài (ví dụ “Canon”) để học từng bước.',[GO('today','Hôm nay tập gì?')]);
     if(has(q,'cam on')||has(q,'thanks')||has(q,'thank you'))return r('Không có gì! Chúc bạn buổi tập vui. Cần gì cứ hỏi nhé.');
-    if(COPYR.some(k=>has(q,k)))return r('Giai điệu nhạc Ghibli (Joe Hisaishi) còn bản quyền nên app không có sẵn và mình không chép nốt được. Cách tập: mua sheet chính thức (bản “easy piano” trước) rồi nhập vào <i>Bài của tôi</i>, hoặc tự nghe và ghi lại ở tab <i>Phá băng</i>. Trong lúc đó, Gymnopédie và Chiều gió đồng luyện đúng các kỹ thuật các bản phối này hay dùng: tay trái rải hợp âm, vòng IV–V–iii–vi, chơi chậm có hồn.',[`data-act="guide" data-song="gymno"|Học Gymnopédie từng bước`,GO('explore','Mở Phá băng')]);
+    if(COPYR.some(k=>has(q,k)))return r('Giai điệu nhạc Ghibli (Joe Hisaishi) còn bản quyền nên app không có sẵn và mình không chép nốt được. Cách tập: mở video hướng dẫn có số ngón rồi tự chép bằng <b>Chép bài từ video</b> (tab Bài hát → Bài của tôi), hoặc mua sheet chính thức (bản “easy piano” trước). Chép xong, bấm Học từng bước để app dạy lại từng tay. Bạn đang đánh được một tay thì nên chép tay phải trước và tập riêng nó, song song luyện ngón hai tay. Trong lúc đó, Gymnopédie và Chiều gió đồng luyện đúng các kỹ thuật các bản phối này hay dùng: tay trái rải hợp âm, vòng IV–V–iii–vi, chơi chậm có hồn.',['data-act="stepEd"|Mở Chép bài từ video','data-act="guide" data-song="x-mirror"|Luyện ngón hai tay',`data-act="guide" data-song="moon"|Học Moonlight từng bước`]);
     let sid=null;for(const [id,al] of Object.entries(SONG_ALIAS)){if(al.some(a=>has(q,a))){sid=id;break;}}
     if(sid){const s=Songs.byId(sid);const info=GUIDE_INFO[sid]||{};const S=Guide.steps(s);const d=Guide.done(sid);const rec=Store.s.songs[sid]||{};
       if(has(q,'hop am')&&info.chords)return r(`Hợp âm của <b>${esc(s.title)}</b> (bản trong app): ${esc(info.chords)}.`,[`data-act="guide" data-song="${sid}"|Học từng bước`]);
@@ -1464,6 +1539,272 @@ const Tutor={msgs:[],
     $('#askIn').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();const v=e.target.value.trim();if(v)this.ask(v);}});
     const c=$('#chat');c.scrollTop=c.scrollHeight;},
   ask(q){const a=this.answer(q);this.msgs.push({role:'user',text:q});this.msgs.push({role:'assistant',html:a.html,acts:a.acts});if(this.msgs.length>40)this.msgs.splice(0,2);this.render();setTimeout(()=>{const i=$('#askIn');if(i&&matchMedia('(pointer:fine)').matches)i.focus();},0);}
+};
+
+/* ===== Chép bài từ video: nhập nốt bằng phím ===== */
+const DURS=[[0.25,'Móc kép','¼'],[0.5,'Móc đơn','½'],[1,'Đen','1'],[1.5,'Đen chấm','1½'],[2,'Trắng','2'],[3,'Trắng chấm','3'],[4,'Tròn','4']];
+const StepEd={id:null,meta:null,tr:null,hand:'R',dur:1,fing:0,chord:false,pend:null,
+  open(id){const c=id?Store.s.custom.find(x=>x.id===id):null;this.id=id||null;
+    this.meta={title:c?c.title:'',tempo:c?c.tempo:70,beats:c?c.beats:4,pickup:c?(c.pickup||0):0};
+    this.tr={R:c&&c.R?this.fromText(c.R,'R'):[],L:c&&c.L?this.fromText(c.L,'L'):[]};this.hand='R';this.dur=1;this.fing=0;this.chord=false;this.pend=null;
+    App.setHandler(this);this.render();setTimeout(()=>KB.scrollTo(48,79,false),50);
+    $('#editor').scrollIntoView({behavior:App.reduced?'auto':'smooth',block:'start'});},
+  fromText(txt,h){try{const r=parseTrack(txt,h);const out=[];let t=0;const by={};r.ev.forEach(e=>{const k=e.t.toFixed(4);(by[k]=by[k]||[]).push(e);});
+      Object.keys(by).map(Number).sort((a,b)=>a-b).forEach(st=>{if(st>t+1e-6)out.push({rest:true,d:+(st-t).toFixed(4)});const g=by[st.toFixed(4)];out.push({ms:g.map(e=>e.m),d:g[0].d,f:g.map(e=>e.f||0)});t=st+g[0].d;});
+      if(r.len>t+1e-6)out.push({rest:true,d:+(r.len-t).toFixed(4)});return out;}catch(e){return [];}},
+  len(h){return this.tr[h].reduce((a,x)=>a+x.d,0);},
+  barOf(t){const pk=this.meta.pickup,b=this.meta.beats;return t<pk-1e-6?0:1+Math.floor((t-pk+1e-6)/b);},
+  toText(h){let t=0,out='';const pk=this.meta.pickup,b=this.meta.beats;
+    for(const x of this.tr[h]){out+=(x.rest?'-':x.ms.map(m=>midiName(m)).join('+'))+':'+(+x.d.toFixed(4))+(x.rest||!x.f.some(Boolean)?'':':'+x.f.map(f=>f||0).join('+'))+' ';t+=x.d;
+      const rel=t-pk;if(rel>1e-6&&Math.abs(rel/b-Math.round(rel/b))<1e-6||(pk&&Math.abs(t-pk)<1e-6))out+='| ';}
+    return out.replace(/\|\s*$/,'').trim();},
+  onNote(m){if(this.chord){if(!this.pend)this.pend={ms:[],d:this.dur,f:[]};if(!this.pend.ms.includes(m)){this.pend.ms.push(m);this.pend.f.push(this.fing);}this.fing=0;this.render();return;}
+    this.tr[this.hand].push({ms:[m],d:this.dur,f:[this.fing]});this.fing=0;this.render();},
+  endChord(){if(this.pend&&this.pend.ms.length){const o=this.pend.ms.map((m,i)=>[m,this.pend.f[i]]).sort((a,b)=>a[0]-b[0]);this.tr[this.hand].push({ms:o.map(x=>x[0]),d:this.dur,f:o.map(x=>x[1])});}this.pend=null;this.render();},
+  play(which){AudioEng.init();const R=this.toText('R'),L=this.toText('L');let comp;try{comp=compileSong({R,L,beats:this.meta.beats,hands:'RL'});}catch(e){toast(e.message);return;}
+    const spb=60/this.meta.tempo;let from=0;if(which==='last'){const n=this.len(this.hand);from=Math.max(0,n-2*this.meta.beats);}
+    const t0=AudioEng.now()+0.1;comp.ev.filter(e=>e.t>=from-1e-6&&(which!=='last'||e.h===this.hand)).forEach(e=>AudioEng.play(e.m,Math.max(0.1,e.d*spb*0.95),t0+(e.t-from)*spb,0.8));},
+  save(){const m=this.meta;m.title=($('#seTitle').value||'').trim()||'Bài chép từ video';m.tempo=+$('#seTempo').value||70;m.beats=+$('#seBeats').value||4;m.pickup=+$('#sePick').value||0;
+    if(!this.tr.R.length&&!this.tr.L.length){toast('Chưa có nốt nào để lưu.');return null;}
+    const rec={title:m.title,tempo:m.tempo,beats:m.beats,pickup:m.pickup,R:this.toText('R'),L:this.toText('L')};
+    try{compileSong({...rec,hands:'RL'});}catch(e){toast('Lỗi: '+e.message);return null;}
+    if(this.id){const i=Store.s.custom.findIndex(x=>x.id===this.id);Store.s.custom[i]={...Store.s.custom[i],...rec};}else{this.id='u'+Date.now().toString(36);Store.s.custom.push({id:this.id,...rec,createdAt:Date.now()});}
+    Store.save();const s=Songs.byId(this.id);if(s)delete s._steps;toast('Đã lưu “'+m.title+'”');return this.id;},
+  close(){App.setHandler(null);$('#editor').innerHTML='';Songs.renderList();},
+  barsHTML(h){const items=this.tr[h];if(!items.length)return `<p class="muted sm">Chưa có nốt nào cho ${h==='R'?'tay phải':'tay trái'}.</p>`;
+    let t=0;const bars={};items.forEach((x,i)=>{const b=this.barOf(t);(bars[b]=bars[b]||[]).push({x,i,t});t+=x.d;});
+    const full=b=>{const pk=this.meta.pickup,bb=this.meta.beats;const sum=bars[b].reduce((a,y)=>a+y.x.d,0);return b===0?Math.abs(sum-pk)<1e-6:Math.abs(sum-bb)<1e-6;};
+    return `<div class="sebars">${Object.keys(bars).map(Number).map(b=>`<div class="sebar ${full(b)?'':'open'}"><span class="bn">${b===0?'đà':b}</span>${bars[b].map(({x,i})=>`<button class="chip" data-sei="${i}" title="Bấm để đổi độ dài">${x.rest?'lặng':x.ms.map(m=>pcName(m,'solfege')+(Math.floor(m/12)-1)).join('+')}${!x.rest&&x.f.some(Boolean)?`<sup>${x.f.map(f=>f||'·').join('')}</sup>`:''}<small>${(DURS.find(dd=>dd[0]===x.d)||[0,0,+x.d.toFixed(2)])[2]}</small></button>`).join('')}</div>`).join('')}</div>`;},
+  render(){const el=$('#editor');if(!el)return;const m=this.meta;const nR=this.len('R'),nL=this.len('L');const bars=n=>Math.max(0,Math.ceil((n-m.pickup)/m.beats-1e-6));
+    el.innerHTML=`<div class="panel" id="stepEd"><div class="row-between"><h3 style="margin:0">Chép bài từ video</h3><button class="btn ghost sm" data-se="close">Đóng</button></div>
+    <details class="sm"><summary><b>Cách chép một video hướng dẫn</b></summary><ol>
+      <li>Mở video ở cửa sổ hoặc thiết bị khác, chỉnh tốc độ YouTube xuống 0,5× hoặc 0,25×, tạm dừng sau mỗi vài nốt.</li>
+      <li>Chép <b>hết tay phải trước</b> (thường là các nốt bên phải, nhiều video tô màu riêng), rồi mới chép tay trái.</li>
+      <li>Chọn độ dài nốt, chọn số ngón nếu video có ghi, rồi bấm phím trên đàn màn hình, bàn phím máy tính, hoặc đánh trên PSR-F52 khi đã bật Micro.</li>
+      <li>Nhiều nốt cùng lúc: bật <b>Hợp âm</b>, bấm các phím, rồi bấm <b>Xong hợp âm</b>.</li>
+      <li>Ô nhịp viền cam là ô chưa đủ phách. Bấm vào một nốt để đổi độ dài; nghe lại thường xuyên để so với video.</li>
+      <li>Lưu, rồi bấm <b>Học từng bước</b>: app dạy lại bài của bạn như mọi bài khác (tay phải, tay trái, ghép hai tay).</li></ol></details>
+    <div class="grid2"><label class="field col">Tên bài<input id="seTitle" value="${esc(m.title)}" maxlength="80" placeholder="Ví dụ: bài tôi chép từ video"></label>
+      <label class="field col">Tốc độ (nhịp/phút)<input id="seTempo" type="number" min="30" max="200" value="${m.tempo}"></label>
+      <label class="field col">Số phách mỗi ô<input id="seBeats" type="number" min="1" max="12" value="${m.beats}"></label>
+      <label class="field col">Ô lấy đà (phách)<input id="sePick" type="number" min="0" max="11" step="0.5" value="${m.pickup}"></label></div>
+    <div class="controls"><div class="seg" role="radiogroup" aria-label="Tay đang chép"><button data-seh="R" aria-pressed="${this.hand==='R'}">Tay phải · ${bars(nR)} ô</button><button data-seh="L" aria-pressed="${this.hand==='L'}">Tay trái · ${bars(nL)} ô</button></div></div>
+    <div class="controls"><span class="field">Độ dài</span><div class="seg wrap" role="radiogroup" aria-label="Độ dài nốt">${DURS.map(([v,l,s])=>`<button data-sed="${v}" aria-pressed="${this.dur===v}" title="${l}: ${s} phách">${l}</button>`).join('')}</div></div>
+    <div class="controls"><span class="field">Ngón cho nốt tiếp theo</span><div class="seg" role="radiogroup" aria-label="Số ngón">${[0,1,2,3,4,5].map(f=>`<button data-sef="${f}" aria-pressed="${this.fing===f}">${f||'Không ghi'}</button>`).join('')}</div></div>
+    <div class="controls"><button class="btn ${this.chord?'primary':''}" data-se="chord">${this.chord?(this.pend&&this.pend.ms.length?'Xong hợp âm ('+this.pend.ms.map(x=>pcName(x,'solfege')).join('+')+')':'Đang chờ phím hợp âm… (bấm để tắt)'):'Hợp âm'}</button>
+      <button class="btn" data-se="rest">Thêm dấu lặng</button><button class="btn" data-se="undo">Xóa nốt cuối</button>
+      <button class="btn ghost" data-se="last">Nghe 2 ô cuối</button><button class="btn ghost" data-se="all">Nghe cả bài</button></div>
+    <p class="sm"><b>${this.hand==='R'?'Tay phải':'Tay trái'}</b> · ${(+this.len(this.hand).toFixed(2))} phách. Bấm phím để thêm nốt.</p>
+    ${this.barsHTML(this.hand)}
+    <div class="controls"><button class="btn primary" data-se="save">Lưu bài</button><button class="btn" data-se="learn">Lưu và Học từng bước</button>${this.id?`<button class="btn ghost sm" data-edit="${esc(this.id)}">Sửa bằng chữ</button>`:''}</div></div>`;
+    ['seTitle','seTempo','seBeats','sePick'].forEach(k=>$('#'+k).addEventListener('change',e=>{const key={seTitle:'title',seTempo:'tempo',seBeats:'beats',sePick:'pickup'}[k];this.meta[key]=k==='seTitle'?e.target.value:+e.target.value;if(k!=='seTitle'&&k!=='seTempo')this.render();}));},
+  click(t){const d=t.dataset;
+    if(d.seh){this.hand=d.seh;if(this.pend)this.endChord();this.render();return true;}
+    if(d.sed){this.dur=+d.sed;this.render();return true;}
+    if(d.sef!==undefined){this.fing=+d.sef;this.render();return true;}
+    if(d.sei!==undefined){const x=this.tr[this.hand][+d.sei];const vals=DURS.map(z=>z[0]);x.d=vals[(vals.indexOf(x.d)+1)%vals.length]||1;this.render();return true;}
+    switch(d.se){case 'close':this.close();break;case 'chord':if(this.chord){this.endChord();this.chord=false;}else{this.chord=true;this.pend=null;}this.render();break;
+      case 'rest':this.tr[this.hand].push({rest:true,d:this.dur});this.render();break;case 'undo':this.tr[this.hand].pop();this.render();break;
+      case 'last':this.play('last');break;case 'all':this.play('all');break;case 'save':if(this.save())this.render();break;
+      case 'learn':{const id=this.save();if(id){App.setHandler(null);$('#editor').innerHTML='';Player.open(Songs.byId(id),{guide:true});}break;}
+      default:return false;}
+    return true;}
+};
+
+/* ===== Nhập file MIDI ===== */
+const GM_FAM=['Piano','Bộ gõ giai điệu','Organ','Guitar','Bass','Đàn dây','Dàn dây','Kèn đồng','Kèn lưỡi gà','Sáo','Synth','Synth nền','Hiệu ứng','Nhạc cụ dân tộc','Bộ gõ','Hiệu ứng'];
+const GM_NAME={0:'Piano',1:'Piano',2:'Piano điện',3:'Piano honky-tonk',4:'Piano điện',5:'Piano điện',6:'Harpsichord',8:'Celesta',9:'Glockenspiel',10:'Hộp nhạc',11:'Vibraphone',12:'Marimba',13:'Xylophone',14:'Chuông ống',16:'Organ',17:'Organ',18:'Organ',19:'Organ nhà thờ',21:'Accordion',24:'Guitar nylon',25:'Guitar dây sắt',26:'Guitar jazz',27:'Guitar điện',32:'Bass',33:'Bass điện',40:'Violin',41:'Viola',42:'Cello',43:'Contrabass',44:'Dây tremolo',45:'Dây gảy (pizzicato)',46:'Đàn hạc',47:'Timpani',48:'Dàn dây',49:'Dàn dây',52:'Hợp xướng',56:'Trumpet',57:'Trombone',58:'Tuba',60:'Kèn cor',61:'Dàn kèn đồng',64:'Saxophone',65:'Saxophone',66:'Saxophone',68:'Oboe',69:'English horn',70:'Bassoon',71:'Clarinet',72:'Piccolo',73:'Sáo',74:'Sáo dọc',75:'Sáo pan',79:'Ocarina'};
+const gmName=p=>p==null?'':(GM_NAME[p]||GM_FAM[p>>3]||'');
+const fmtTime=s=>{s=Math.max(0,Math.round(s));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');};
+const MidiFile={
+  parse(buf){const v=new DataView(buf);let p=0;const str=n=>{let s='';for(let i=0;i<n;i++)s+=String.fromCharCode(v.getUint8(p+i));p+=n;return s;};
+    const u32=()=>{const x=v.getUint32(p);p+=4;return x;},u16=()=>{const x=v.getUint16(p);p+=2;return x;},u8=()=>v.getUint8(p++);
+    const vlq=()=>{let x=0,b;do{b=u8();x=(x<<7)|(b&0x7f);}while(b&0x80);return x;};
+    if(buf.byteLength<14||str(4)!=='MThd')throw new Error('Đây không phải file MIDI (.mid).');const hl=u32();const fmt=u16(),nt=u16(),div=u16();p+=hl-6;
+    if(div&0x8000)throw new Error('File MIDI dùng kiểu thời gian SMPTE, app chưa đọc được.');
+    let tempo=0;const ts=[],notes=[],tnames={},progs={};let endTick=0;
+    for(let tr=0;tr<nt&&p+8<=v.byteLength;tr++){
+      if(str(4)!=='MTrk')throw new Error('File MIDI bị hỏng.');const len=u32();const end=Math.min(v.byteLength,p+len);let tick=0,run=0;const on={};
+      while(p<end){tick+=vlq();let st=v.getUint8(p);if(st&0x80){p++;run=st;}else st=run;
+        if(st===0xFF){const ty=u8();const l=vlq();
+          if(ty===0x51&&!tempo&&l===3)tempo=(v.getUint8(p)<<16)|(v.getUint8(p+1)<<8)|v.getUint8(p+2);
+          if(ty===0x58&&l>=2)ts.push({tick,num:v.getUint8(p),den:Math.pow(2,v.getUint8(p+1))});
+          if(ty===0x03&&l>0&&l<80&&!tnames[tr]){let s='';for(let i=0;i<l;i++)s+=String.fromCharCode(v.getUint8(p+i));try{s=decodeURIComponent(escape(s));}catch(e){}tnames[tr]=s.trim();}
+          p+=l;continue;}
+        if(st===0xF0||st===0xF7){p+=vlq();continue;}
+        const ty=st&0xF0,ch=st&0x0F;const a=u8();const b=(ty===0xC0||ty===0xD0)?0:u8();
+        if(ty===0xC0){progs[tr*16+ch]=a;continue;}
+        if(ty===0x90&&b>0){(on[ch*128+a]=on[ch*128+a]||[]).push(tick);}
+        else if(ty===0x80||(ty===0x90&&b===0)){const q=on[ch*128+a];if(q&&q.length){const t0=q.shift();if(ch!==9){notes.push({tick:t0,dur:Math.max(1,tick-t0),m:a,part:tr*16+ch});endTick=Math.max(endTick,tick);}}}
+      }p=end;}
+    if(!notes.length)throw new Error('Không tìm thấy nốt nào trong file.');
+    notes.sort((x,y)=>x.tick-y.tick||x.m-y.m);
+    const parts={};for(const n of notes){const P=parts[n.part]||(parts[n.part]={key:n.part,tr:n.part>>4,ch:n.part&15,n:0,sum:0,min:127,max:0});P.n++;P.sum+=n.m;P.min=Math.min(P.min,n.m);P.max=Math.max(P.max,n.m);}
+    for(const P of Object.values(parts)){P.avg=P.sum/P.n;P.prog=progs[P.key]!=null?progs[P.key]:Object.entries(progs).find(([k])=>(+k&15)===P.ch)?.[1];P.name=tnames[P.tr]||'';}
+    const tol=div/24;const al=notes.filter(n=>{const x=n.tick/(div/4);return Math.abs(x-Math.round(x))*(div/4)<=tol;}).length/notes.length;
+    return {notes,div,bpm:tempo?Math.round(60e6/tempo):100,ts,parts,endTick,grid:al,fmt};},
+  bars(M){if(M._bars)return M._bars;const div=M.div;const byTick={};M.ts.forEach(t=>byTick[t.tick]=t);let ts=Object.values(byTick).sort((a,b)=>a.tick-b.tick);
+    if(!ts.length||ts[0].tick>0)ts.unshift({tick:0,num:4,den:4});const segs=[],starts=[];
+    ts.forEach((s,i)=>{const e=i+1<ts.length?ts[i+1].tick:M.endTick+1;if(e<=s.tick)return;const bl=Math.max(1,Math.round(s.num*div*4/s.den));segs.push({tick:s.tick,end:e,bl,sig:s.num+'/'+s.den});for(let t=s.tick;t<e;t+=bl)starts.push(t);});
+    const main=segs.reduce((a,b)=>(b.end-b.tick)>(a.end-a.tick)?b:a);
+    const pickup=segs.length>1&&segs[0].end-segs[0].tick<=segs[0].bl&&segs[0].bl<main.bl;
+    const changes=segs.some((s,i)=>s.sig!==main.sig&&!(i===0&&pickup));
+    M._bars={starts,pickup,n0:pickup?0:1,mainBeats:main.bl/div,sig:main.sig,changes};return M._bars;},
+  barIdxOfTick(M,t){const st=this.bars(M).starts;let lo=0,hi=st.length-1;while(lo<hi){const mid=(lo+hi+1)>>1;if(st[mid]<=t)lo=mid;else hi=mid-1;}return lo;},
+  firstBar(M){const B=this.bars(M);return this.barIdxOfTick(M,M.notes[0].tick)+B.n0;},
+  lastBar(M){const B=this.bars(M);return this.barIdxOfTick(M,M.endTick-1)+B.n0;},
+  defaultParts(M){const ps=Object.values(M.parts);const tot=ps.reduce((a,p)=>a+p.n,0);if(ps.length<=2)return ps.map(p=>p.key);
+    const big=ps.filter(p=>p.n>=tot*0.05);if(big.length<=2)return big.map(p=>p.key);
+    const hi=big.reduce((a,b)=>b.avg>a.avg?b:a),lo=big.reduce((a,b)=>b.avg<a.avg?b:a);return [hi.key,lo.key];},
+  split(notes,div){const P={move:1,prior:0.15,span:14,spanC:2,rec:2,cont:0.1,cap:12,beam:6};const tol=div/16;const G=[];
+    for(let i=0;i<notes.length;){let j=i;while(j<notes.length&&notes[j].tick-notes[i].tick<=tol)j++;G.push(notes.slice(i,j).sort((x,y)=>x.m-y.m));i=j;}
+    let prev=[{v:60,cost:0,lR:null,lL:null,tR:-1e9,tL:-1e9,back:null,c:0}];const sp=a=>a.length?a[a.length-1]-a[0]:0;const hist=[];
+    for(const g of G){const k=g.length,t=g[0].tick,ps=g.map(x=>x.m);const cur=[];
+      for(let c=0;c<=k;c++){const L=ps.slice(0,c),R=ps.slice(c);let best=null;
+        for(const s of prev){let v,mv;
+          if(c===0){const hi=ps[0]-0.5;v=Math.min(s.v,hi);mv=Math.max(0,s.v-hi);}
+          else if(c===k){const lo=ps[k-1]+0.5;v=Math.max(s.v,lo);mv=Math.max(0,lo-s.v);}
+          else{const lo=ps[c-1]+0.5,hi=ps[c]-0.5;v=Math.min(hi,Math.max(lo,s.v));mv=Math.abs(v-s.v);}
+          let cost=s.cost+mv*P.move+Math.abs(v-60)*P.prior+Math.max(0,sp(R)-P.span)*P.spanC+Math.max(0,sp(L)-P.span)*P.spanC;
+          if(R.length&&s.lR!=null&&t-s.tR<P.rec*div)cost+=Math.min(P.cap,Math.abs(R[R.length-1]-s.lR))*P.cont;
+          if(L.length&&s.lL!=null&&t-s.tL<P.rec*div)cost+=Math.min(P.cap,Math.abs(L[0]-s.lL))*P.cont;
+          if(!best||cost<best.cost)best={v,cost,lR:R.length?R[R.length-1]:s.lR,lL:L.length?L[0]:s.lL,tR:R.length?t:s.tR,tL:L.length?t:s.tL,back:s,c};}
+        cur.push(best);}
+      cur.sort((a,b)=>a.cost-b.cost);prev=cur.slice(0,P.beam);hist.push(g);
+      if(hist.length%400===0){const base=prev[0].cost;prev.forEach(s=>{s.cost-=base;});}}
+    let s=prev[0];for(let gi=hist.length-1;gi>=0;gi--){const g=hist[gi];g.forEach((x,k)=>x.h=k<s.c?'L':'R');const b=s.back;s.back=null;s=b;}},
+  simplify(ev,barT,len,mode){const R=ev.filter(e=>e.h==='R').sort((a,b)=>a.t-b.t||b.m-a.m);const mel=[];
+    for(let i=0;i<R.length;){let j=i;while(j<R.length&&R[j].t-R[i].t<1/24+1e-9)j++;let top=R[i];for(let k=i;k<j;k++)if(R[k].m>top.m)top=R[k];
+      const pv=mel[mel.length-1];if(!(pv&&top.t<pv.t+pv.d*0.75-1e-6&&top.m<pv.m))mel.push({...top,h:'R'});i=j;}
+    mel.forEach((e,k)=>{const nx=mel[k+1];e.d=Math.max(1/12,Math.min(e.d,(nx?nx.t:len)-e.t));});
+    const out=mel.slice();
+    if(mode==='easy'){const L=ev.filter(e=>e.h==='L');const bars=barT.concat([len]);
+      for(let b=0;b<bars.length-1;b++){const bs=bars[b],be=bars[b+1],bl=be-bs;const pos=bl>=4-1e-6?[0,bl/2]:[0];
+        pos.forEach((p,k)=>{const s0=bs+p,s1=k+1<pos.length?bs+pos[k+1]:be;const c=L.filter(e=>e.t>=s0-1e-6&&e.t<Math.min(s1,s0+1)-1e-6);if(!c.length)return;
+          const low=c.reduce((a,x)=>x.m<a.m?x:a);out.push({t:s0,d:s1-s0,m:low.m,h:'L',f:0});});}}
+    return out.sort((a,b)=>a.t-b.t||a.m-b.m);},
+  finger(line,hand){const SL=[0,2,4,5,7];let base=null;
+    for(let i=0;i<line.length;i++){const m=line[i].m;
+      if(base===null||m<base||m>base+8){const nx=line.slice(i,i+6).map(x=>x.m);let best=null;
+        for(let b=m-8;b<=m;b++){let c=0;for(const x of nx){if(x>=b&&x<=b+8)c++;else break;}const sh=base===null?0:Math.abs(b-base);
+          const sc=c*10-sh*0.3-(hand==='R'&&isBlack(b)?3:0)-(hand==='L'&&isBlack(b+7)?3:0);if(!best||sc>best.sc)best={b,sc};}base=best.b;}
+      const rel=m-base;let k=0,bd=99;SL.forEach((v,ix)=>{const dd=Math.abs(v-rel);if(dd<bd){bd=dd;k=ix;}});
+      let f=hand==='R'?k+1:5-k;if(f===1&&isBlack(m))f=2;
+      const pv=line[i-1];if(pv&&pv.f===f&&pv.m!==m){const up=m>pv.m;f=hand==='R'?(up?Math.min(5,f+1):Math.max(1,f-1)):(up?Math.max(1,f-1):Math.min(5,f+1));}
+      line[i].f=f;}},
+  toSong(M,o){const B=this.bars(M),st=B.starts;const ix=k=>Math.max(0,Math.min(st.length-1,k-B.n0));
+    const a=st[ix(o.from)],bT=ix(o.to)+1<st.length?st[ix(o.to)+1]:M.endTick+1;
+    const notes=M.notes.filter(n=>o.parts.includes(n.part)&&n.tick>=a&&n.tick<bT).map(n=>({...n}));
+    if(o.parts.length===2){const [p1,p2]=o.parts.map(k=>M.parts[k]);const hi=p1.avg>=p2.avg?p1.key:p2.key;notes.forEach(n=>n.h=n.part===hi?'R':'L');}
+    else this.split(notes,M.div);
+    const q=x=>Math.round(x/M.div*12)/12;const len=q(bT-a);let moved=0;
+    let ev=notes.map(n=>{let m=n.m;while(m<LOW)m+=12;while(m>HIGH)m-=12;if(m!==n.m)moved++;const t=q(n.tick-a);return {t,d:Math.max(1/12,Math.min(q(n.dur),len-t)),m,h:n.h,f:0};});
+    const seen={};ev=ev.filter(e=>{const k=e.t+'|'+e.m;if(seen[k]){seen[k].d=Math.max(seen[k].d,e.d);return false;}seen[k]=e;return true;}).sort((x,y)=>x.t-y.t||x.m-y.m);
+    const barT=st.filter(t=>t>=a&&t<bT).map(t=>q(t-a));
+    if(o.mode!=='full'){ev=this.simplify(ev,barT,len,o.mode);this.finger(ev.filter(e=>e.h==='R'),'R');this.finger(ev.filter(e=>e.h==='L'),'L');}
+    const pickup=B.pickup&&o.from===0&&barT.length>1?barT[1]:0;
+    return {ev,len,barT,pickup,beats:B.mainBeats,moved};},
+  level(r,tempo){const secs=Math.max(1,r.len*60/tempo);const nps=r.ev.length/secs;const ch=h=>{const by={};r.ev.filter(e=>e.h===h).forEach(e=>by[e.t]=(by[e.t]||0)+1);return Math.max(0,...Object.values(by));};
+    const lab=nps<1.3?['Dễ','ok']:nps<2.5?['Vừa sức','ok']:nps<4.5?['Khó','warn']:['Rất khó','bad'];return {nps,lab,maxR:ch('R'),maxL:ch('L')};}
+};
+const MidiBox={key:'phimnha:midis',mem:null,
+  list(){if(this.mem)return this.mem;try{this.mem=JSON.parse(localStorage.getItem(this.key)||'[]');}catch(e){this.mem=[];}return this.mem;},
+  persist(){try{localStorage.setItem(this.key,JSON.stringify(this.mem));return true;}catch(e){toast('Bộ nhớ trình duyệt đầy: xóa bớt file trong Hộp MIDI. File vẫn dùng được trong lần mở này.',5000);return false;}},
+  b64(u8){let s='';for(let i=0;i<u8.length;i+=0x8000)s+=String.fromCharCode.apply(null,u8.subarray(i,i+0x8000));return btoa(s);},
+  bytes(b64){const s=atob(b64),u=new Uint8Array(s.length);for(let i=0;i<s.length;i++)u[i]=s.charCodeAt(i);return u;},
+  add(name,u8){MidiFile.parse(u8.buffer.slice(u8.byteOffset,u8.byteOffset+u8.byteLength));name=String(name).replace(/[_]+/g,' ').replace(/\s+-\s+/g,' – ').replace(/\s+/g,' ').trim();const L=this.list();const ex=L.find(x=>x.name===name&&x.size===u8.length);if(ex)return ex.id;
+    const id='f'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);L.push({id,name,b64:this.b64(u8),size:u8.length,at:Date.now()});this.persist();return id;},
+  get(id){return this.list().find(x=>x.id===id);},
+  remove(id){this.mem=this.list().filter(x=>x.id!==id);this.persist();},
+  load(id){const f=this.get(id);const u=this.bytes(f.b64);return MidiFile.parse(u.buffer);},
+  html(){const L=this.list();return `<section class="panel" id="midiBoxP"><div class="row-between"><h3 style="margin:0">Hộp MIDI</h3><div class="controls" style="margin:0"><button class="btn primary sm" data-act="midiPick">Chọn file .mid</button><button class="btn sm" data-act="midiPaste">Dán từ tin nhắn</button></div></div>
+    <p class="sm muted">File MIDI được lưu trong app trên máy này. Bấm <b>Lấy đoạn để học</b> để chọn đoạn, chọn mức Dễ hay Gốc, rồi học từng bước. Mỗi lần lấy một đoạn 8–16 ô là vừa.</p>
+    <div id="mPaste" hidden><textarea id="mPasteT" rows="3" placeholder="Dán các tin nhắn bắt đầu bằng PNMD (dán nhiều tin một lúc cũng được)" aria-label="Dán tin nhắn chứa file MIDI"></textarea><p class="sm" id="mPasteS" aria-live="polite">Chưa nhận được đoạn nào.</p></div>
+    ${L.length?`<ul class="wish">${L.map(f=>`<li><div><b>${esc(f.name)}</b> <span class="muted sm">${Math.round(f.size/1024*10)/10} KB</span></div><div class="controls" style="margin:4px 0"><button class="btn sm primary" data-act="midiOpen" data-fid="${f.id}">Lấy đoạn để học</button><button class="btn sm ghost danger" data-act="midiDel" data-fid="${f.id}">Xóa</button></div></li>`).join('')}</ul>`:'<p class="muted sm">Chưa có file nào.</p>'}</section>`;},
+  rx:{P:{},N:0},
+  paste(text){const re=/PNMD v1 (\d+)\/(\d+) h=([0-9a-f]{8}) n=(\d+)/g;let m,bad=0;const grab=(v,i,n)=>{let d='',c;while(i<v.length&&d.length<n){c=v.charAt(i++);if(/[A-Za-z0-9+\/=]/.test(c))d+=c;else if(!/\s/.test(c))break;}return d;};
+    while(m=re.exec(text)){const dd=grab(text,re.lastIndex,+m[4]);if(+m[2]!==this.rx.N){this.rx={P:{},N:+m[2]};}if(dd.length===+m[4]&&Backup.hash(dd)===m[3])this.rx.P[m[1]]=dd;else bad++;}
+    const N=this.rx.N,miss=[];for(let i=1;i<=N;i++)if(!this.rx.P[i])miss.push(i);
+    const s=$('#mPasteS');if(s)s.textContent=N?`Đã có ${N-miss.length}/${N} đoạn.${miss.length?' Còn thiếu: '+miss.join(', ')+'.':' Đang giải nén…'}${bad?` (${bad} đoạn bị lỗi, hãy dán lại)`:''}`:'Không thấy tin nhắn PNMD nào trong phần vừa dán.';
+    if(N&&!miss.length)this.finish();},
+  async finish(){try{let x='';for(let i=1;i<=this.rx.N;i++)x+=this.rx.P[i];let u=this.bytes(x);
+      if(u[0]===0x1f&&u[1]===0x8b){if(!window.DecompressionStream)throw new Error('Trình duyệt này quá cũ để giải nén. Hãy cập nhật Safari/Chrome.');u=new Uint8Array(await new Response(new Blob([u]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer());}
+      const j=JSON.parse(new TextDecoder().decode(u));let ok=0;const errs=[];for(const f of j.files||[]){try{this.add(f.n,this.bytes(f.b));ok++;}catch(e){errs.push(f.n);}}
+      this.rx={P:{},N:0};toast(`Đã thêm ${ok} file vào Hộp MIDI.${errs.length?' Không đọc được: '+errs.join(', '):''}`,4500);Songs.renderList();
+      setTimeout(()=>{const b=$('#midiBoxP');if(b)b.scrollIntoView({block:'start',behavior:App.reduced?'auto':'smooth'});},60);}
+    catch(e){const s=$('#mPasteS');if(s)s.textContent='Lỗi: '+e.message;}}
+};
+const MidiImport={M:null,fid:null,wish:null,
+  pick(wishIdx){this.wish=wishIdx==null||wishIdx===''?null:+wishIdx;const inp=document.createElement('input');inp.type='file';inp.accept='.mid,.midi,audio/midi,audio/x-midi';inp.multiple=this.wish==null;
+    inp.onchange=async()=>{const fs=[...inp.files];let last=null;const bad=[];for(const f of fs){try{const u=new Uint8Array(await f.arrayBuffer());last=MidiBox.add(f.name.replace(/\.(mid|midi)$/i,''),u);}catch(e){bad.push(f.name+': '+e.message);}}
+      if(bad.length)toast(bad.join(' · '),5000);if(!last)return;if(fs.length===1||this.wish!=null)this.form(last);else{toast(`Đã thêm ${fs.length-bad.length} file vào Hộp MIDI.`);Songs.renderList();}};inp.click();},
+  form(fid){let M;try{M=MidiBox.load(fid);}catch(e){toast(e.message,4500);return;}this.M=M;this.fid=fid;const f=MidiBox.get(fid);const B=MidiFile.bars(M);
+    const fb=MidiFile.firstBar(M),lb=MidiFile.lastBar(M);const secs=M.endTick*60/(M.bpm*M.div);const w=this.wish!=null?Store.s.wish[this.wish]:null;
+    const parts=Object.values(M.parts).sort((a,b)=>b.avg-a.avg);const def=MidiFile.defaultParts(M);
+    const beginner=!(Store.s.lessons.x3&&Store.s.lessons.x3.done);
+    const warns=[];if(M.grid<0.7)warns.push('File này giống bản thu một người đang chơi (nhịp co giãn tự do), không phải soạn từ bản nhạc: vạch ô nhịp và độ dài nốt sẽ lệch. Vẫn tập được ở chế độ <b>Chờ nốt</b>; nếu tìm được bản MIDI soạn từ bản nhạc thì tốt hơn nhiều.');
+    if(B.changes)warns.push('Bài có đổi số chỉ nhịp giữa chừng; app giữ đúng vạch ô theo file.');if(secs>420)warns.push(`File dài ${fmtTime(secs)}. Dùng ô “Từ phút” để nhảy tới đoạn bạn muốn.`);
+    App.go('songs');if(Player.song)Player.close();
+    $('#editor').innerHTML=`<div class="panel"><div class="row-between"><h3 style="margin:0">Lấy đoạn để học: ${esc(f.name)}</h3><button class="btn ghost sm" data-act="midiCancel">Hủy</button></div>
+      <p class="sm">${M.notes.length.toLocaleString('vi-VN')} nốt · ô ${fb}–${lb} · nhịp ${B.sig}${B.pickup?' (có ô lấy đà)':''} · tốc độ gốc ${M.bpm} · dài ${fmtTime(secs)}</p>
+      ${warns.map(x=>`<p class="callout sm" style="margin:6px 0">${x}</p>`).join('')}
+      ${parts.length>1?`<fieldset><legend class="sm"><b>Nhạc cụ dùng để tập</b> <span class="muted">(app đã chọn sẵn bè giai điệu và bè trầm)</span></legend><div class="partlist">${parts.map(P=>`<label class="chk"><input type="checkbox" data-part="${P.key}" ${def.includes(P.key)?'checked':''}> ${esc(P.name&&!/^track ?\d*$/i.test(P.name)?P.name:(gmName(P.prog)||'Rãnh '+(P.tr+1)))} <span class="muted sm">· ${P.n} nốt · ${midiName(P.min)}–${midiName(P.max)}${gmName(P.prog)&&P.name?' · '+gmName(P.prog):''}</span></label>`).join('')}</div></fieldset>`:''}
+      <fieldset><legend class="sm"><b>Mức độ</b></legend><div class="seg" role="radiogroup" aria-label="Mức độ">
+        <button type="button" data-mmode="melody" aria-pressed="false" title="Chỉ giai điệu tay phải">Rất dễ: giai điệu</button>
+        <button type="button" data-mmode="easy" aria-pressed="${beginner}" title="Giai điệu tay phải + nốt bass tay trái ở phách mạnh">Dễ: giai điệu + bass</button>
+        <button type="button" data-mmode="full" aria-pressed="${!beginner}" title="Giữ nguyên mọi nốt">Gốc</button></div>
+        <p class="muted sm" style="margin:4px 0 0">Mức Dễ và Rất dễ do app tự rút gọn từ bản gốc, có số ngón gợi ý tự động.</p></fieldset>
+      <div class="grid2"><label class="field col">Tên bài<input id="miTitle" value="${esc(w?w.t:f.name)}" maxlength="80"></label>
+        <label class="field col">Từ ô<input id="miFrom" type="number" min="${B.n0}" max="${lb}" value="${fb}"></label>
+        <label class="field col">Đến ô<input id="miTo" type="number" min="${B.n0}" max="${lb}" value="${Math.min(lb,fb+15)}"></label>
+        <label class="field col">Hoặc từ phút<input id="miAt" placeholder="vd 1:30" inputmode="numeric"></label>
+        <label class="field col">Tốc độ tập (nhịp/phút)<input id="miTempo" type="number" min="30" max="220" value="${Math.max(40,Math.round(M.bpm*0.7))}"></label></div>
+      <p class="sm" id="miPrev" aria-live="polite"></p>
+      <div class="controls"><button class="btn primary" data-act="midiSave">Lưu và Học từng bước</button><button class="btn" data-act="midiHear">Nghe thử đoạn này</button></div></div>`;
+    this.mode=beginner?'easy':'full';const el=$('#editor');
+    el.querySelectorAll('[data-mmode]').forEach(b=>b.addEventListener('click',()=>{this.mode=b.dataset.mmode;el.querySelectorAll('[data-mmode]').forEach(x=>x.setAttribute('aria-pressed',x===b));this.preview();}));
+    el.querySelectorAll('input').forEach(i=>i.addEventListener('input',()=>{if(i.id==='miAt')this.seek();this.preview();}));
+    this.preview();el.scrollIntoView({behavior:App.reduced?'auto':'smooth',block:'start'});},
+  opts(){const ps=[...document.querySelectorAll('#editor [data-part]')];const parts=ps.length?ps.filter(x=>x.checked).map(x=>+x.dataset.part):Object.keys(this.M.parts).map(Number);
+    let from=+$('#miFrom').value,to=+$('#miTo').value;if(!(to>=from))to=from;return {parts,from,to,mode:this.mode};},
+  seek(){const v=($('#miAt').value||'').trim();const m=/^(\d+)(?::(\d{1,2}))?$/.exec(v);if(!m)return;const sec=m[2]!=null?(+m[1])*60+(+m[2]):+m[1];
+    const tick=sec*this.M.bpm*this.M.div/60;const B=MidiFile.bars(this.M);const k=MidiFile.barIdxOfTick(this.M,tick)+B.n0;$('#miFrom').value=k;$('#miTo').value=Math.min(MidiFile.lastBar(this.M),k+15);},
+  build(){const o=this.opts();if(!o.parts.length)return null;return MidiFile.toSong(this.M,o);},
+  preview(){const el=$('#miPrev');const r=this.build();if(!r){el.innerHTML='<span class="bad">Hãy chọn ít nhất một nhạc cụ.</span>';return;}
+    const tempo=+$('#miTempo').value||80;const lv=MidiFile.level(r,tempo);const nR=r.ev.filter(e=>e.h==='R').length,nL=r.ev.length-nR;const beginner=!(Store.s.lessons.x3&&Store.s.lessons.x3.done);
+    el.innerHTML=`Đoạn này: ${Math.max(1,r.barT.length)} ô · tay phải ${nR} nốt · tay trái ${nL} nốt${lv.maxR>1||lv.maxL>1?` · hợp âm tới ${Math.max(lv.maxR,lv.maxL)} nốt`:''} · khoảng ${lv.nps.toFixed(1).replace('.',',')} nốt/giây ở tốc độ tập → <b class="${lv.lab[1]}">${lv.lab[0]}</b>${beginner&&lv.lab[1]!=='ok'?'. Với mức hiện tại của bạn, thử mức <b>Dễ</b> hoặc giảm tốc độ.':''}`;},
+  hear(){const r=this.build();if(!r)return;AudioEng.init();const spb=60/(+$('#miTempo').value||80);const t0=AudioEng.now()+0.1;r.ev.slice(0,700).forEach(e=>AudioEng.play(e.m,Math.max(0.1,e.d*spb*0.95),t0+e.t*spb,0.75));},
+  save(){const r=this.build();if(!r||!r.ev.length){toast('Đoạn này không có nốt nào.');return;}const o=this.opts();const M=this.M;
+    const title=($('#miTitle').value||'').trim()||'Bài nhập từ MIDI';const full=o.from<=MidiFile.firstBar(M)&&o.to>=MidiFile.lastBar(M);
+    const tag={melody:' · rất dễ',easy:' · dễ',full:''}[o.mode];
+    const id='m'+Date.now().toString(36);const song={id,title:title+(full?'':` (ô ${o.from}–${o.to})`)+tag,tempo:+$('#miTempo').value||80,beats:r.beats,pickup:r.pickup,barT:r.barT,
+      evs:r.ev.map(e=>e.f?[e.t,+e.d.toFixed(4),e.m,e.h,e.f]:[e.t,+e.d.toFixed(4),e.m,e.h]),len:r.len,midi:true,src:this.fid,createdAt:Date.now()};
+    Store.s.custom.push(song);if(this.wish!=null&&Store.s.wish[this.wish])Store.s.wish[this.wish].song=id;Store.save();
+    if(r.moved)toast(`${r.moved} nốt nằm ngoài 61 phím đã được dời một quãng tám cho vừa đàn.`,4000);
+    $('#editor').innerHTML='';Player.open(Songs.byId(id),{guide:true});}
+};
+
+/* ===== Bài mơ ước: danh sách của bạn ===== */
+const WISH_DEFAULT=[
+ [1,'Gymnopédie No.1','Satie','legato, pedal, tay trái hợp âm chậm','gymno'],[1,'Gymnopédie No.3','Satie','legato, cảm âm',''],[1,'Gnossienne No.1','Satie','cảm âm, nhịp tự do',''],
+ [1,'Morning Prayer (Op.39 No.1)','Tchaikovsky','tiết tấu rõ, hợp organ',''],[1,'The Sick Doll (Op.39 No.7)','Tchaikovsky','tiết tấu rõ, hợp organ',''],[1,'Old French Song (Op.39 No.16)','Tchaikovsky','tiết tấu rõ, hợp organ',''],[1,'Sweet Dream (Op.39 No.21)','Tchaikovsky','tiết tấu rõ, hợp organ',''],
+ [1,'Melody (Op.68 No.1)','Schumann','đọc nốt',''],[1,'Soldier\u2019s March (Op.68 No.2)','Schumann','đọc nốt',''],[1,'First Loss (Op.68 No.16)','Schumann','đọc nốt',''],[1,'The Happy Farmer (Op.68 No.10)','Schumann','đọc nốt, giai điệu tay trái',''],
+ [2,'Prelude Op.28 No.4','Chopin','rubato, biểu cảm',''],[2,'Prelude Op.28 No.7','Chopin','phrasing',''],[2,'Prelude Op.28 No.20','Chopin','hợp âm, biểu cảm',''],[2,'Waltz in A minor (B.150)','Chopin','rubato',''],[2,'Mazurka Op.7 No.1','Chopin','phrasing',''],
+ [2,'Arabesque (Op.100 No.2)','Burgmüller','ngón nhanh',''],[2,'Innocence (Op.100 No.5)','Burgmüller','legato',''],[2,'Ballade (Op.100 No.15)','Burgmüller','giai điệu tay trái',''],[2,'Progress (Op.100 No.6)','Burgmüller','âm giai',''],
+ [2,'Minuet in G (BWV Anh. 114)','Bach / Petzold','đọc nốt, hai tay','minuet'],[2,'Musette in D (BWV Anh. 126)','Bach','hai tay',''],[2,'Prelude in C (WTC I)','Bach','hợp âm rải','prelude'],
+ [3,'Arabesque No.1','Debussy','biểu cảm',''],[3,'Rêverie','Debussy','biểu cảm',''],[3,'La fille aux cheveux de lin','Debussy','biểu cảm',''],
+ [3,'Nocturne Op.9 No.2','Chopin','rubato',''],[3,'Prelude Op.28 No.15 (Raindrop)','Chopin','biểu cảm',''],[3,'Waltz Op.64 No.2','Chopin','rubato',''],
+ [3,'Für Elise','Beethoven','hai tay nối tiếp','elise'],[3,'Sonata Op.49 No.2 (Mov.1)','Beethoven','hai tay',''],[3,'Moonlight Sonata Mov.1','Beethoven','chùm ba, pedal','moon'],
+ [4,'Invention No.1','Bach','độc lập hai tay, hợp organ',''],[4,'Invention No.4','Bach','độc lập hai tay, hợp organ',''],[4,'Invention No.8','Bach','độc lập hai tay, hợp organ',''],[4,'Two-Part Inventions (toàn bộ)','Bach','độc lập hai tay, hợp organ','']];
+const Wish={
+  list(){if(!Store.s.wish)Store.s.wish=WISH_DEFAULT.map(([lv,t,c,f,s])=>({lv,t,c,f,song:s}));return Store.s.wish;},
+  q(w,extra){return 'https://www.google.com/search?q='+encodeURIComponent(`${w.c} ${w.t} ${extra}`);},
+  html(){const L=this.list();const LV={1:'Level 1 · Dễ (2–6 tháng)',2:'Level 2 · Trung bình',3:'Level 3 · Trung cấp khá',4:'Level 4 · Rất đáng luyện trên organ'};
+    return `<details class="panel" id="wishBox" ${Store.s.wishOpen?'open':''}><summary><b>Bài mơ ước của bạn</b> <span class="muted sm">· ${L.filter(w=>w.song&&Songs.byId(w.song)).length}/${L.length} bài đã có trong app</span></summary>
+      <p class="sm">Bài có nút <b>Học từng bước</b> là đã có trong app. Bài khác: bấm <b>Tìm MIDI</b> để tìm file MIDI miễn phí (các bài này đã hết bản quyền; nên chọn bản piano, có tách hai tay), tải về, rồi bấm <b>Nhập MIDI</b>. <b>Bản nhạc</b> mở bản in miễn phí trên IMSLP để xem số ngón và dấu diễn tấu.</p>
+      ${[1,2,3,4].map(lv=>`<h4>${LV[lv]}</h4><ul class="wish">${L.map((w,i)=>({w,i})).filter(x=>x.w.lv===lv).map(({w,i})=>{const has=w.song&&Songs.byId(w.song);const r=has?Store.s.songs[w.song]||{}:{};
+        return `<li><div><b>${esc(w.t)}</b> <span class="muted sm">${esc(w.c)}${w.f?' · '+esc(w.f):''}</span>${has&&r.best?` <span class="best">${r.best}%</span>`:''}</div><div class="controls" style="margin:4px 0">${has?`<button class="btn sm primary" data-act="guide" data-song="${esc(w.song)}">Học từng bước</button>`:`<a class="btn sm ghost" href="${this.q(w,'piano MIDI free download')}" target="_blank" rel="noopener">Tìm MIDI</a><button class="btn sm" data-act="midiImport" data-wi="${i}">Nhập MIDI</button>`}<a class="btn sm ghost" href="${this.q(w,'IMSLP')}" target="_blank" rel="noopener">Bản nhạc</a>${w.mine?`<button class="btn sm ghost danger" data-act="wishDel" data-wi="${i}" aria-label="Xóa">Xóa</button>`:''}</div></li>`;}).join('')}</ul>`).join('')}
+      <div class="controls"><input id="wishT" placeholder="Thêm bài: tên bài" maxlength="80"><input id="wishC" placeholder="Tác giả" maxlength="40" style="width:140px"><select id="wishL">${[1,2,3,4].map(l=>`<option value="${l}">Level ${l}</option>`).join('')}</select><button class="btn sm" data-act="wishAdd">Thêm</button></div></details>`;}
 };
 
 /* ===== Phá băng: hợp âm, vòng hợp âm, ghi giai điệu ===== */
@@ -1605,7 +1946,9 @@ const Skills={runner:null,
   render(){const el=$('#skillsList');
     const stat=k=>{const a=this.acc(k);return a==null?'':`<span class="muted sm">Gần đây đúng ${Math.round(a*100)}%</span>`;};
     el.innerHTML=`<p class="lead">Bài luyện ngắn 2–5 phút. Mỗi ngày làm một vài bài, nhất là phần app đánh dấu cần ôn.</p>
-    <div class="skillgrid">${SKILLS.map(s=>`<button class="skill" data-skill="${s.id}"><b>${esc(s.title)}</b><span>${esc(s.desc)}</span>${s.stat?stat(s.stat):''}</button>`).join('')}</div>`;},
+    <div class="skillgrid">${SKILLS.map(s=>`<button class="skill" data-skill="${s.id}"><b>${esc(s.title)}</b><span>${esc(s.desc)}</span>${s.stat?stat(s.stat):''}</button>`).join('')}</div>
+    <h3 style="margin-top:24px">Luyện ngón hai tay</h3><p class="muted sm">Từ một tay lên hai tay: làm theo thứ tự, mỗi bài học từng bước.</p>
+    <div class="skillgrid">${SONGS.filter(s=>s.ex).sort((a,b)=>a.ex-b.ex).map(s=>{const r=Store.s.songs[s.id]||{};const n=Guide.done(s.id).length,N=Guide.steps(s).length;return `<button class="skill" data-act="guide" data-song="${s.id}"><b>${s.ex}. ${esc(s.title)}</b><span>${esc(s.tip)}</span><span class="muted sm">${r.best?`Tốt nhất ${r.best}% · `:''}${n?`${n}/${N} bước`:'Chưa học'}</span></button>`;}).join('')}</div>`;},
   open(id){const s=SKILLS.find(x=>x.id===id);if(!s)return;App.go('skills');this.close();$('#skillsList').hidden=true;const p=$('#skillPanel');p.hidden=false;
     p.innerHTML=`<button class="link" data-act="backSkills">← Luyện kỹ năng</button><h2>${esc(s.title)}</h2><div id="skillTask"></div><div id="skillDone" aria-live="polite"></div>`;
     const sp=s.make();const ctx={el:$('#skillTask'),done:(pass,score)=>{Store.xp(pass?15:5);App.markPlan(id==='warm'||id==='scales'?'warm':'skill');
@@ -1626,6 +1969,7 @@ const Backup={
     for(const [k,v] of Object.entries(o.lessons||{})){const a=s.lessons[k];if(v.done&&!(a&&a.done))nL++;s.lessons[k]={...(a||{}),...v,done:!!((a&&a.done)||v.done),score:Math.max((a&&a.score)||0,v.score||0)};}
     for(const [k,v] of Object.entries(o.songs||{})){const a=s.songs[k]||{};if(!a.plays&&v.plays)nS++;s.songs[k]={best:Math.max(a.best||0,v.best||0),stars:Math.max(a.stars||0,v.stars||0),plays:Math.max(a.plays||0,v.plays||0),speed:Math.max(a.speed||0,v.speed||0)};}
     for(const [k,v] of Object.entries(o.guides||{})){const g=s.guides[k]||(s.guides[k]={done:[]});(v.done||[]).forEach(x=>{if(!g.done.includes(x))g.done.push(x);});}
+    if(o.wish&&(!s.wish||newer))s.wish=o.wish;
     const ids=new Set(s.custom.map(c=>c.id));(o.custom||[]).forEach(c=>{if(!ids.has(c.id)){s.custom.push(c);nC++;}});
     for(const [k,v] of Object.entries(o.days||{}))s.days[k]=Math.max(s.days[k]||0,v);
     if(newer)s.stats=o.stats;for(const k of ['iv','q','echo','note'])s.ear[k]=Math.max(s.ear[k]||0,(o.ear||{})[k]||0);
@@ -1686,7 +2030,7 @@ const TIPS_=0;const TIPS=['Bấm VOICE rồi nhập số trên PSR-F52 để đ�
 const App={dockH(){document.documentElement.style.setProperty('--dockH',($('#dock').offsetHeight||200)+'px');},handler:null,view:'today',reduced:matchMedia('(prefers-reduced-motion: reduce)').matches,
   setHandler(h){if(this.handler&&this.handler!==h&&this.handler.destroy&&this.handler!==Player)this.handler.destroy();this.handler=h;},
   go(v){if(v!==this.view){
-      if(this.view==='songs'&&Player.song)Player.close();if(this.view==='path')Lessons.close(),$('#lessonPanel').hidden=true,$('#pathList').hidden=false;
+      if(this.view==='songs'&&Player.song)Player.close();if(this.view==='songs'&&this.handler===StepEd){this.handler=null;}if(this.view==='path')Lessons.close(),$('#lessonPanel').hidden=true,$('#pathList').hidden=false;
       if(this.view==='skills')Skills.close(),$('#skillPanel').hidden=true,$('#skillsList').hidden=false;if(this.view==='explore'){Explore.stop();KB.clear('scale','tgtR','tgtL');}
       this.handler=null;}
     this.view=v;$$('main > section').forEach(s=>s.hidden=s.id!=='view-'+v);$$('nav [data-go]').forEach(b=>b.setAttribute('aria-current',b.dataset.go===v?'page':'false'));
@@ -1705,12 +2049,13 @@ const App={dockH(){document.documentElement.style.setProperty('--dockH',($('#doc
     const map={note:['find','Tìm phím nhanh'],staff:[Math.random()<0.5?'treble':'bass','Đọc khuông'],ear:[pick(['interval','echo','quality']),'Luyện tai'],rhythm:['rhythm','Tiết tấu']};return {id:map[best.k][0],name:map[best.k][1],acc:best.a};},
   recSong(){const p=Store.s.profile||{};const goals=p.goals||[];const st=Lessons.stageOf();const maxLv=st<=2?1:st===3?2:st<=5?3:st===6?4:5;
     const tagFor={ghibli:'Kiểu nhạc phim',classic:'Cổ điển',organ:'Organ',pop:'Lễ hội'};const want=goals.map(g=>tagFor[g]);
-    const c=SONGS.filter(s=>s.level<=maxLv).map(s=>{const r=Store.s.songs[s.id]||{};let sc=(r.stars||0)*2-(s.level);if(s.tags.some(t=>want.includes(t)))sc-=2.5;if(!r.plays)sc-=0.5;return {s,sc};}).sort((a,b)=>a.sc-b.sc);
+    const c=SONGS.filter(s=>!s.ex&&s.level<=maxLv).map(s=>{const r=Store.s.songs[s.id]||{};let sc=(r.stars||0)*2-(s.level);if(s.tags.some(t=>want.includes(t)))sc-=2.5;if(!r.plays)sc-=0.5;return {s,sc};}).sort((a,b)=>a.sc-b.sc);
     return c.length?c[0].s:SONGS[0];},
   plan(){const p=Store.s.profile||{minutes:20,goals:[]};const M=p.minutes||20;const nx=Lessons.next();const wk=this.weakest();const song=this.recSong();const r=Store.s.songs[song.id]||{};
     const items=[{key:'warm',title:'Khởi động ngón',desc:'5 ngón hai tay, chậm và đều',min:M>=30?4:2,act:`data-skill="warm"`}];
     const ld=Store.s.plan.date===todayKey()&&Store.s.plan.done.includes('lesson');
     if(nx)items.push({key:'lesson',title:ld?'Đã học xong một bài hôm nay':'Bài học: '+nx.title,desc:ld?'Còn sức thì học tiếp: '+nx.title:'Chặng '+nx.stage+' · '+STAGES.find(s=>s.id===nx.stage).title,min:Math.round(M*0.35),act:`data-lesson="${nx.id}"`});
+    const L2=Store.s.lessons;if(L2.lhpos&&L2.lhpos.done){const ex=SONGS.filter(s=>s.ex).sort((a,b)=>a.ex-b.ex).find(s=>((Store.s.songs[s.id]||{}).stars||0)<2);if(ex)items.push({key:'hands2',title:'Luyện ngón hai tay: '+ex.title,desc:'Bài '+ex.ex+'/8 · từng bước: tay phải, tay trái, ghép chậm',min:Math.max(3,Math.round(M*0.15)),act:`data-act="guide" data-song="${ex.id}"`});}
     items.push({key:'skill',title:'Ôn: '+wk.name,desc:wk.acc<=1?'Phần bạn đang yếu nhất theo kết quả gần đây':'Làm quen với tên các phím',min:Math.max(3,Math.round(M*0.2)),act:`data-skill="${wk.id}"`});
     const sdesc=!r.best?'Học từng bước: nghe trước, tập từng đoạn, rồi ghép hai tay':r.best<70?`Lần trước ${r.best}%. Học tiếp từng bước cho chắc`:`Lần trước ${r.best}%. Mục tiêu: ${r.best>=90?'tăng tốc độ thêm 10%':'vượt '+Math.min(100,r.best+10)+'%'}`;
     items.push({key:'song',title:'Bài hát: '+song.title,desc:sdesc,min:Math.round(M*0.3),act:(r.best||0)<70?`data-act="guide" data-song="${song.id}"`:`data-act="openSong" data-song="${song.id}"`});
@@ -1776,13 +2121,14 @@ const App={dockH(){document.documentElement.style.setProperty('--dockH',($('#doc
     Store.connect();Coach.init();
   },
   click(e){
-    const t=e.target.closest('[data-go],[data-lesson],[data-song],[data-act],[data-skill],[data-edit],[data-xk],[data-xm],[data-xc],[data-xr],[data-xi],[data-q],[data-step],[data-fb]');if(!t)return;
+    const t=e.target.closest('[data-go],[data-lesson],[data-song],[data-act],[data-skill],[data-edit],[data-xk],[data-xm],[data-xc],[data-xr],[data-xi],[data-q],[data-step],[data-fb],[data-se],[data-seh],[data-sed],[data-sef],[data-sei]');if(!t)return;
     const d=t.dataset;AudioEng.init();
+    if(this.handler===StepEd&&StepEd.click(t))return;
     if(d.go){this.go(d.go);return;}
     if(d.skill){Skills.open(d.skill);return;}
     if(d.lesson&&!d.act){Lessons.open(d.lesson);return;}
     if(d.song&&!d.act){const s=Songs.byId(d.song);if(s)Player.open(s);return;}
-    if(d.edit){Songs.editor(d.edit);return;}
+    if(d.edit){if(this.handler===StepEd)this.handler=null;Songs.editor(d.edit);return;}
     if(d.xk!==undefined){Explore.key=+d.xk;Explore.render();return;}if(d.xm!==undefined){Explore.minor=d.xm==='1';Explore.prog=0;Explore.render();return;}
     if(d.xc!==undefined){Explore.playChord(+d.xc);return;}if(d.xr){Explore.recMode=d.xr;Explore.render();return;}if(d.xi!==undefined){Explore.cycleDur(+d.xi);return;}
     if(d.q){if(OFFLINE){App.go('coach');Tutor.ask(d.q);}else Coach.ask(d.q);return;}
@@ -1791,6 +2137,13 @@ const App={dockH(){document.documentElement.style.setProperty('--dockH',($('#doc
     switch(d.act){
       case 'openSong':{const s=Songs.byId(d.song);if(s){const l=d.lesson?LESSONS.find(x=>x.id===d.lesson):null;Player.open(s,l?{lesson:l.id,minScore:l.task.min,hands:l.task.hands}:{});}break;}
       case 'guide':{const s=Songs.byId(d.song);if(s){const l=d.lesson?LESSONS.find(x=>x.id===d.lesson):null;Player.open(s,{guide:true,...(l?{lesson:l.id,minScore:l.task.min}:{})});}break;}
+      case 'stepEd':{this.go('songs');if(Player.song)Player.close();StepEd.open(d.id||null);break;}
+      case 'midiImport':MidiImport.pick(d.wi);break;case 'midiPick':MidiImport.pick(null);break;case 'midiOpen':MidiImport.wish=null;MidiImport.form(d.fid);break;
+      case 'midiDel':if(confirm('Xóa file này khỏi Hộp MIDI? Các bài đã lấy đoạn vẫn giữ nguyên.')){MidiBox.remove(d.fid);Songs.renderList();}break;
+      case 'midiPaste':{const b=$('#mPaste');b.hidden=!b.hidden;if(!b.hidden){const t=$('#mPasteT');t.focus();t.oninput=()=>{const v=t.value;t.value='';MidiBox.paste(v);};}break;}
+      case 'midiSave':MidiImport.save();break;case 'midiHear':MidiImport.hear();break;case 'midiCancel':$('#editor').innerHTML='';break;
+      case 'wishAdd':{const t=($('#wishT').value||'').trim();if(!t){toast('Nhập tên bài trước.');break;}Wish.list().push({lv:+$('#wishL').value||1,t,c:($('#wishC').value||'').trim(),f:'',song:'',mine:true});Store.s.wishOpen=true;Store.save();Songs.renderList();break;}
+      case 'wishDel':{Wish.list().splice(+d.wi,1);Store.s.wishOpen=true;Store.save();Songs.renderList();break;}
       case 'nextLesson':{const n=Lessons.next();if(n)Lessons.open(n.id);break;}
       case 'backSongs':Player.close();this.renderSongList();break;
       case 'backPath':Lessons.close();$('#lessonPanel').hidden=true;$('#pathList').hidden=false;Lessons.renderPath();this.handler=null;break;
@@ -1802,7 +2155,7 @@ const App={dockH(){document.documentElement.style.setProperty('--dockH',($('#doc
       case 'newSong':Songs.editor(null);break;
       case 'eCheck':{const r=Songs.check(Songs.readEditor());$('#eMsg').textContent=r.msg;break;}
       case 'eHear':Songs.hear();break;case 'eSave':Songs.save(d.id||null);break;
-      case 'eDel':if(confirm('Xóa bài này?')){Store.s.custom=Store.s.custom.filter(x=>x.id!==d.id);delete Store.s.songs[d.id];Store.save();Songs.renderList();}break;
+      case 'eDel':if(confirm('Xóa bài này?')){Store.s.custom=Store.s.custom.filter(x=>x.id!==d.id);delete Store.s.songs[d.id];(Store.s.wish||[]).forEach(w=>{if(w.song===d.id)w.song='';});Store.save();$('#editor').innerHTML='';Songs.renderList();}break;
       case 'profile':this.onboard(true);break;
       case 'xPlay':Explore.toggle();break;case 'xRec':Explore.recToggle();break;case 'xRecPlay':Explore.recPlay();break;
       case 'xRecUndo':Explore.rec.pop();Explore.recChords=null;Explore.render();break;case 'xRecClear':Explore.rec=[];Explore.recChords=null;Explore.render();break;
@@ -1812,6 +2165,7 @@ const App={dockH(){document.documentElement.style.setProperty('--dockH',($('#doc
   }
 };
 document.addEventListener('change',e=>{if(e.target.matches('[data-xb]')&&Explore.recChords){Explore.recChords[+e.target.dataset.xb]=+e.target.value;}});
+document.addEventListener('toggle',e=>{if(e.target.id==='wishBox'){Store.s.wishOpen=e.target.open;}},true);
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>App.init());else App.init();
 
 </script>
